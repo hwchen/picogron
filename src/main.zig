@@ -14,9 +14,10 @@ pub fn main() !void {
     var val_fba = std.heap.FixedBufferAllocator.init(&val_buf);
     const val_alloc = val_fba.allocator();
 
-    // tracks statement stack
-    var stack_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    const stack_alloc = stack_arena.allocator();
+    // tracks statement stack (nested levels, with object key)
+    var stack_buf: [4096]u8 = undefined;
+    var stack_fba = std.heap.FixedBufferAllocator.init(&stack_buf);
+    const stack_alloc = stack_fba.allocator();
     var stack = std.ArrayList([]const u8).init(stack_alloc);
     try stack.append("json");
 
