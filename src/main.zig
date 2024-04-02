@@ -29,8 +29,16 @@ pub fn main() !void {
     var jr = std.json.reader(j_alloc, stdin_file);
 
     while (true) {
-        try writeStack(stack.items, &bw);
         const token = try jr.nextAlloc(val_alloc, .alloc_if_needed);
+        // write stack
+        switch (token) {
+            .true, .false, .null, .number, .allocated_number, .string, .allocated_string, .object_begin, .array_begin => {
+                try writeStack(stack.items, &bw);
+            },
+            else => {},
+        }
+
+        // write value
         switch (token) {
             .end_of_document => break,
             .true => try stdout.print(" = true\n", .{}),
