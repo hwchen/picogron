@@ -31,11 +31,8 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
         const token = try jr.nextAlloc(val_alloc, .alloc_if_needed);
 
         // write stack
-        switch (token) {
-            .true, .false, .null, .number, .allocated_number, .string, .allocated_string, .object_begin, .array_begin => {
-                try writeStack(stack.items, &stdout);
-            },
-            else => {},
+        if (shouldWriteLine(token)) {
+            try writeStack(stack.items, &stdout);
         }
 
         // write value
@@ -50,27 +47,34 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                 switch (stack.getLast()) {
                     .object_begin => {
                         const val = try jr.nextAlloc(val_alloc, .alloc_if_needed);
+                        if (shouldWriteLine(val)) {
+                            if (shouldBracketField(s)) {
+                                try stdout.print("[\"{s}\"]", .{s});
+                            } else {
+                                try stdout.print(".{s}", .{s});
+                            }
+                        }
                         switch (val) {
                             .end_of_document => break,
                             .number, .allocated_number => |v| {
-                                try stdout.print("{s} = {s};\n", .{ s, v });
+                                try stdout.print(" = {s};\n", .{v});
                             },
                             .string, .allocated_string => |v| {
-                                try stdout.print("{s} = \"{s}\";\n", .{ s, v });
+                                try stdout.print(" = \"{s}\";\n", .{v});
                             },
-                            .true => try stdout.print("{s} = true;\n", .{s}),
-                            .false => try stdout.print("{s} = false;\n", .{s}),
-                            .null => try stdout.print("{s} = null;\n", .{s}),
+                            .true => try stdout.print(" = true;\n", .{}),
+                            .false => try stdout.print(" = false;\n", .{}),
+                            .null => try stdout.print(" = null;\n", .{}),
                             .object_begin => {
-                                try stdout.print("{s} = {{}};\n", .{s});
+                                try stdout.print(" = {{}};\n", .{});
                                 // TODO copy memory better
-                                const k = try fmt.allocPrint(stack_alloc, "{s}", .{s});
-                                try stack.append(.{ .object_begin = k });
+                                const name = try fmt.allocPrint(stack_alloc, "{s}", .{s});
+                                try stack.append(.{ .object_begin = .{ .name = name, .bracket = shouldBracketField(name) } });
                             },
                             .array_begin => {
-                                try stdout.print("{s} = [];\n", .{s});
-                                const v = try fmt.allocPrint(stack_alloc, "{s}", .{s});
-                                try stack.append(.{ .array_begin = .{ .name = v } });
+                                try stdout.print(" = [];\n", .{});
+                                const name = try fmt.allocPrint(stack_alloc, "{s}", .{s});
+                                try stack.append(.{ .array_begin = .{ .name = name, .bracket = shouldBracketField(name) } });
                             },
                             .object_end, .array_end => {
                                 return error.malformedJson;
@@ -86,7 +90,7 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
             },
             .object_begin => {
                 try stdout.print(" = {{}};\n", .{});
-                try stack.append(.{ .object_begin = null });
+                try stack.append(.{ .object_begin = .{} });
             },
             .array_begin => {
                 try stdout.print(" = [];\n", .{});
@@ -128,16 +132,22 @@ fn writeStack(stack: []StackItem, wtr: anytype) !void {
     for (stack) |item| {
         switch (item) {
             .root => try wtr.print("json", .{}),
-            .object_begin => |name| {
-                if (name) |n| {
-                    try wtr.print("{s}.", .{n});
-                } else {
-                    try wtr.print(".", .{});
+            .object_begin => |o| {
+                if (o.name) |n| {
+                    if (o.bracket) {
+                        try wtr.print("[\"{s}\"]", .{n});
+                    } else {
+                        try wtr.print(".{s}", .{n});
+                    }
                 }
             },
             .array_begin => |a| {
                 if (a.name) |n| {
-                    try wtr.print("{s}[{d}]", .{ n, a.curr_idx.? });
+                    if (a.bracket) {
+                        try wtr.print("[\"{s}\"][{d}]", .{ n, a.curr_idx.? });
+                    } else {
+                        try wtr.print("{s}[{d}]", .{ n, a.curr_idx.? });
+                    }
                 } else {
                     try wtr.print("[{d}]", .{a.curr_idx.?});
                 }
@@ -148,9 +158,31 @@ fn writeStack(stack: []StackItem, wtr: anytype) !void {
 
 const StackItem = union(enum) {
     root,
-    object_begin: ?[]const u8,
+    object_begin: struct {
+        name: ?[]const u8 = null,
+        bracket: bool = false,
+    },
     array_begin: struct {
         name: ?[]const u8 = null,
+        bracket: bool = false,
         curr_idx: ?u64 = null,
     },
 };
+
+// Should write line on most tokens, but not on e.g. array end and object end
+fn shouldWriteLine(token: json.Token) bool {
+    return switch (token) {
+        .true, .false, .null, .number, .allocated_number, .string, .allocated_string, .object_begin, .array_begin => true,
+        else => false,
+    };
+}
+
+fn shouldBracketField(s: []const u8) bool {
+    for (s) |c| {
+        switch (c) {
+            'a'...'z', 'A'...'Z', '0'...'9', '_' => {},
+            else => return true,
+        }
+    }
+    return false;
+}
