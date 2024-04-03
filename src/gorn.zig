@@ -16,10 +16,13 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
 
     // tracks statement stack (nested levels, with object key)
     // TODO use gpa so we can free field name strings as needed?
-    var stack_buf: [4096]u8 = undefined;
-    var stack_fba = std.heap.FixedBufferAllocator.init(&stack_buf);
-    const stack_alloc = stack_fba.allocator();
+    var stack_gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const stack_alloc = stack_gpa.allocator();
+    defer {
+        _ = stack_gpa.deinit();
+    }
     var stack = std.ArrayList(StackItem).init(stack_alloc);
+    defer stack.deinit();
     try stack.append(.root);
 
     var bw = std.io.bufferedWriter(wtr);
@@ -99,14 +102,18 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
             .object_end => {
                 // unwind stack to previous bracket + one
                 const last = stack.pop();
-                std.debug.assert(std.meta.activeTag(last) == StackItem.object_begin);
-                // TODO free field string
+                switch (last) {
+                    .object_begin => |o| if (o.name) |name| stack_alloc.free(name),
+                    else => unreachable,
+                }
             },
             .array_end => {
                 // unwind stack to previous bracket
                 const last = stack.pop();
-                std.debug.assert(std.meta.activeTag(last) == StackItem.array_begin);
-                // TODO free field string
+                switch (last) {
+                    .array_begin => |a| if (a.name) |name| stack_alloc.free(name),
+                    else => unreachable,
+                }
             },
             else => return error.PartialValue,
         }
