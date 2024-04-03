@@ -72,17 +72,8 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                                 const v = try fmt.allocPrint(stack_alloc, "{s}", .{s});
                                 try stack.append(.{ .array_begin = .{ .name = v } });
                             },
-                            .object_end => {
-                                // unwind stack to previous bracket + key
-                                const last = stack.pop();
-                                std.debug.assert(std.meta.activeTag(last) == StackItem.object_begin);
-                                // TODO free field string
-                            },
-                            .array_end => {
-                                // unwind stack to previous bracket + key
-                                const last = stack.pop();
-                                std.debug.assert(std.meta.activeTag(last) == StackItem.array_begin);
-                                // TODO free field string
+                            .object_end, .array_end => {
+                                return error.malformedJson;
                             },
                             else => return error.PartialValue,
                         }
