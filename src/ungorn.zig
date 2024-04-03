@@ -61,8 +61,13 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
             } else if (val_is_false) {
                 try jws.write(false);
             } else {
-                const n = try std.fmt.parseFloat(f64, val);
-                try jws.write(n);
+                if (std.fmt.parseInt(i64, val, 10)) |n| {
+                    try jws.write(n);
+                } else |_| if (std.fmt.parseFloat(f64, val)) |x| {
+                    try jws.write(x);
+                } else |_| {
+                    return error.NotJsonValue;
+                }
             }
         }
         try bw.flush();
