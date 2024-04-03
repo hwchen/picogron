@@ -120,7 +120,13 @@ pub fn main() !void {
 
         // increase index if stack inside array
         switch (stack.items[stack.items.len - 1]) {
-            .array_begin => |*a| a.curr_idx += 1,
+            .array_begin => |*a| {
+                if (a.curr_idx) |*curr_idx| {
+                    curr_idx.* += 1;
+                } else {
+                    a.curr_idx = 0;
+                }
+            },
             else => {},
         }
     }
@@ -141,9 +147,9 @@ fn writeStack(stack: []StackItem, bw: anytype) !void {
             },
             .array_begin => |a| {
                 if (a.name) |n| {
-                    try wtr.print("{s}[{d}]", .{ n, a.curr_idx });
+                    try wtr.print("{s}[{d}]", .{ n, a.curr_idx.? });
                 } else {
-                    try wtr.print("[{d}]", .{a.curr_idx});
+                    try wtr.print("[{d}]", .{a.curr_idx.?});
                 }
             },
         }
@@ -155,6 +161,6 @@ const StackItem = union(enum) {
     object_begin: ?[]const u8,
     array_begin: struct {
         name: ?[]const u8 = null,
-        curr_idx: u64 = 0, // TODO this should be ?u64
+        curr_idx: ?u64 = null,
     },
 };
