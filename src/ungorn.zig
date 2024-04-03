@@ -49,7 +49,7 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
             const val_is_false = mem.eql(u8, val, "false");
             if (val_is_string) {
                 // trim quotes on ends
-                try jws.write(val[1 .. val.len - 2]);
+                try jws.write(val[1 .. val.len - 1]);
             } else if (val_is_null) {
                 try jws.write(null);
             } else if (val_is_true) {
