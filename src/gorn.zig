@@ -3,7 +3,7 @@ const json = std.json;
 const mem = std.mem;
 const fmt = std.fmt;
 
-pub fn gorn() !void {
+pub fn gorn(rdr: anytype, wtr: anytype) !void {
     // Used to track nesting levels for json parser
     var j_buf: [512]u8 = undefined;
     var j_fba = std.heap.FixedBufferAllocator.init(&j_buf);
@@ -22,12 +22,10 @@ pub fn gorn() !void {
     var stack = std.ArrayList(StackItem).init(stack_alloc);
     try stack.append(.root);
 
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
+    var bw = std.io.bufferedWriter(wtr);
     const stdout = bw.writer();
 
-    const stdin_file = std.io.getStdIn().reader();
-    var jr = std.json.reader(j_alloc, stdin_file);
+    var jr = std.json.reader(j_alloc, rdr);
 
     while (true) {
         const token = try jr.nextAlloc(val_alloc, .alloc_if_needed);
