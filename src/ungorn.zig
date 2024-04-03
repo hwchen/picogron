@@ -60,7 +60,7 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
                 if (std.fmt.parseInt(i64, val, 10)) |n| {
                     try jws.write(n);
                 } else |_| if (std.fmt.parseFloat(f64, val)) |x| {
-                    try jws.write(x);
+                    try jws.print("{d}", .{x});
                 } else |_| {
                     return error.NotJsonValue;
                 }
