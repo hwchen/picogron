@@ -35,10 +35,10 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
         if (path_info.nest < prev_path_nest) {
             for (0..prev_path_nest - path_info.nest) |_| {
                 const last_nest = stack.pop();
-                if (last_nest == .array) {
-                    try jws.endArray();
-                } else {
-                    try jws.endObject();
+                switch (last_nest) {
+                    .array => try jws.endArray(),
+                    .object, .object_in_brackets => try jws.endObject(),
+                    .root => unreachable,
                 }
             }
         }
@@ -82,6 +82,17 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
         }
         try bw.flush();
     }
+
+    // Close any remaining objects or arrays
+    while (stack.popOrNull()) |item| {
+        switch (item) {
+            .array => try jws.endArray(),
+            .object, .object_in_brackets => try jws.endObject(),
+            .root => {},
+        }
+    }
+    _ = try stdout.write("\n");
+    try bw.flush();
 }
 
 const PathInfo = struct {
