@@ -19,6 +19,7 @@ fn gorn() !void {
     const val_alloc = val_fba.allocator();
 
     // tracks statement stack (nested levels, with object key)
+    // TODO use gpa so we can free field name strings as needed?
     var stack_buf: [4096]u8 = undefined;
     var stack_fba = std.heap.FixedBufferAllocator.init(&stack_buf);
     const stack_alloc = stack_fba.allocator();
@@ -81,13 +82,13 @@ fn gorn() !void {
                                 // unwind stack to previous bracket + key
                                 const last = stack.pop();
                                 std.debug.assert(std.meta.activeTag(last) == StackItem.object_begin);
-                                // TODO free
+                                // TODO free field string
                             },
                             .array_end => {
                                 // unwind stack to previous bracket + key
                                 const last = stack.pop();
                                 std.debug.assert(std.meta.activeTag(last) == StackItem.array_begin);
-                                // TODO free
+                                // TODO free field string
                             },
                             else => return error.PartialValue,
                         }
@@ -110,13 +111,13 @@ fn gorn() !void {
                 // unwind stack to previous bracket + one
                 const last = stack.pop();
                 std.debug.assert(std.meta.activeTag(last) == StackItem.object_begin);
-                // TODO free
+                // TODO free field string
             },
             .array_end => {
                 // unwind stack to previous bracket
                 const last = stack.pop();
                 std.debug.assert(std.meta.activeTag(last) == StackItem.array_begin);
-                // TODO free
+                // TODO free field string
             },
             else => return error.PartialValue,
         }
