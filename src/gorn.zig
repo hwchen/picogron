@@ -89,7 +89,7 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                     },
                     else => {
                         // just a string
-                        try stdout.print(" = {s}\n", .{s});
+                        try stdout.print(" = \"{s}\"\n", .{s});
                     },
                 }
             },
