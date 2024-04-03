@@ -40,7 +40,6 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
             // assumes that fields do not contain periods
             var path_it = mem.splitBackwardsSequence(u8, path, ".");
             const key = path_it.next().?;
-            std.debug.print("path: {s}, key: {s}, is_arr{any}\n", .{ path, key, path_is_arr });
             try jws.objectField(key);
         }
         if (val_is_obj) {
