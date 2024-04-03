@@ -1,3 +1,9 @@
+gorn file:
+    cat {{file}} | zig build run
+
+ungorn file:
+    cat {{file}} | zig build run -- -u
+
 roundtrip json-file:
     cat {{json-file}} | zig build run | zig build run -- -u
 
