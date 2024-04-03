@@ -76,13 +76,13 @@ pub fn main() !void {
                                 // unwind stack to previous bracket + key
                                 const last = stack.pop();
                                 std.debug.assert(mem.eql(u8, @tagName(last), "object_begin"));
-                                _ = stack.pop(); // TODO free
+                                // TODO free
                             },
                             .array_end => {
                                 // unwind stack to previous bracket + key
                                 const last = stack.pop();
                                 std.debug.assert(mem.eql(u8, @tagName(last), "array_begin"));
-                                _ = stack.pop();
+                                // TODO free
                             },
                             else => return error.PartialValue,
                         }
@@ -105,13 +105,13 @@ pub fn main() !void {
                 // unwind stack to previous bracket + one
                 const last = stack.pop();
                 std.debug.assert(mem.eql(u8, @tagName(last), "object_begin"));
-                _ = stack.pop(); // TODO free
+                // TODO free
             },
             .array_end => {
                 // unwind stack to previous bracket
                 const last = stack.pop();
                 std.debug.assert(mem.eql(u8, @tagName(last), "array_begin"));
-                _ = stack.pop();
+                // TODO free
             },
             else => return error.PartialValue,
         }
@@ -119,6 +119,7 @@ pub fn main() !void {
         val_fba.reset();
 
         // increase index if stack inside array
+        //std.debug.print("{any}\n", .{stack.items});
         switch (stack.items[stack.items.len - 1]) {
             .array_begin => |*a| {
                 if (a.curr_idx) |*curr_idx| {
