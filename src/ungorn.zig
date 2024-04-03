@@ -76,6 +76,13 @@ const PathInfo = struct {
     last_field_str: []const u8,
 };
 
+const LastField = enum {
+    root,
+    array,
+    object,
+    object_in_brackets,
+};
+
 // simple parsing
 // TODO handle escaped quotes
 fn parsePath(path: []const u8) PathInfo {
@@ -128,10 +135,3 @@ fn parsePath(path: []const u8) PathInfo {
         .last_field_str = last_field_str,
     };
 }
-
-const LastField = enum {
-    root,
-    array,
-    object,
-    object_in_brackets,
-};
