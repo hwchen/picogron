@@ -47,12 +47,29 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
         } else if (val_is_arr) {
             try jws.beginArray();
         } else {
-            try jws.write(val);
+            const val_is_string = val[0] == '\"';
+            const val_is_null = mem.eql(u8, val, "null");
+            const val_is_true = mem.eql(u8, val, "true");
+            const val_is_false = mem.eql(u8, val, "false");
+            if (val_is_string) {
+                try jws.write(val);
+            } else if (val_is_null) {
+                try jws.write(null);
+            } else if (val_is_true) {
+                try jws.write(true);
+            } else if (val_is_false) {
+                try jws.write(false);
+            } else {
+                std.debug.print("{s}", .{val});
+                const n = try std.fmt.parseFloat(f64, val);
+                try jws.write(n);
+            }
         }
         try bw.flush();
     }
 }
 
+// TODO: don't count periods inside of quoted idents
 fn pathNest(path: []const u8) usize {
     var sum: usize = 0;
     for (path) |c| {
