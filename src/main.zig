@@ -33,7 +33,7 @@ pub fn main() !void {
         // write stack
         switch (token) {
             .true, .false, .null, .number, .allocated_number, .string, .allocated_string, .object_begin, .array_begin => {
-                try writeStack(stack.items, &bw);
+                try writeStack(stack.items, &stdout);
             },
             else => {},
         }
@@ -133,9 +133,7 @@ pub fn main() !void {
     }
 }
 
-// bw is a buffered writer
-fn writeStack(stack: []StackItem, bw: anytype) !void {
-    var wtr = bw.writer();
+fn writeStack(stack: []StackItem, wtr: anytype) !void {
     for (stack) |item| {
         switch (item) {
             .root => try wtr.print("json", .{}),
