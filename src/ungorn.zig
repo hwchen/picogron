@@ -8,8 +8,18 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
     const stdout = bw.writer();
     var jws = std.json.writeStream(stdout, .{});
 
+    // tracks nesting levels of array and object
+    // PathInfo happens to hold last_field_str, but may point to garbage
+    // as it's only used immediately after parsing.
+    // Currently uses difference in nesting level between two paths to know
+    // how far back to pop.
+    var stack_buf: [1024]u8 = undefined;
+    var stack_fba = std.heap.FixedBufferAllocator.init(&stack_buf);
+    const stack_alloc = stack_fba.allocator();
+    var stack = std.ArrayList(LastField).init(stack_alloc);
+    try stack.append(.root);
+
     var prev_path_nest: u32 = 0;
-    var prev_path_is_arr = false;
     var line_buf: [1024]u8 = undefined;
     while (try input.readUntilDelimiterOrEof(&line_buf, '\n')) |line_raw| {
         const line = mem.trimRight(u8, line_raw, ";");
@@ -23,14 +33,16 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
 
         // Try to end objects and arrays
         if (path_info.nest < prev_path_nest) {
-            if (prev_path_is_arr) {
-                try jws.endArray();
-            } else {
-                try jws.endObject();
+            for (0..prev_path_nest - path_info.nest) |_| {
+                const last_nest = stack.pop();
+                if (last_nest == .array) {
+                    try jws.endArray();
+                } else {
+                    try jws.endObject();
+                }
             }
         }
         prev_path_nest = path_info.nest;
-        prev_path_is_arr = path_info.last_field == .array;
 
         try bw.flush();
 
@@ -40,8 +52,10 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
         }
         if (val_is_obj) {
             try jws.beginObject();
+            try stack.append(.object);
         } else if (val_is_arr) {
             try jws.beginArray();
+            try stack.append(.array);
         } else {
             const val_is_string = val[0] == '\"';
             const val_is_null = mem.eql(u8, val, "null");
@@ -73,7 +87,8 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
 const PathInfo = struct {
     nest: u32,
     last_field: LastField,
-    // Only needed during lifetime of the path, no need to allocate
+    // Only needed immediately after parsing. May return
+    // garbage once this struct is put on a stack.
     last_field_str: []const u8,
 };
 
