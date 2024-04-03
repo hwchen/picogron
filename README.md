@@ -18,4 +18,5 @@ Port of [gron](https://github.com/tomnomnom/gron)
 - preserving array indices by inserting null during ungorn
 
 ## TODO
-- Does gron handle periods in field names?
+- Does gron handle periods in field names? Yes, do this.
+- JSON float rendering (requires patch to std lib).
