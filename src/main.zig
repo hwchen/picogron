@@ -4,6 +4,10 @@ const mem = std.mem;
 const fmt = std.fmt;
 
 pub fn main() !void {
+    try gorn();
+}
+
+fn gorn() !void {
     // Used to track nesting levels for json parser
     var j_buf: [512]u8 = undefined;
     var j_fba = std.heap.FixedBufferAllocator.init(&j_buf);
@@ -30,6 +34,7 @@ pub fn main() !void {
 
     while (true) {
         const token = try jr.nextAlloc(val_alloc, .alloc_if_needed);
+
         // write stack
         switch (token) {
             .true, .false, .null, .number, .allocated_number, .string, .allocated_string, .object_begin, .array_begin => {
