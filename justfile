@@ -4,3 +4,6 @@ roundtrip json-file:
 # arrays are formatted differently, so need to do compact for both
 roundtrip-diff json-file:
     zig build && diff <(cat {{json-file}} | ./zig-out/bin/gorn | ./zig-out/bin/gorn -u) <(cat {{json-file}} | jq -c)
+
+roundtrip-test:
+    \fd json testdata --exec just roundtrip-diff

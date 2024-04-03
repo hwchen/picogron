@@ -38,6 +38,7 @@
           pkgs.zigpkgs.master-2024-04-01
           zls
           pkgs.jq
+          pkgs.fd
         ];
       };
     });
