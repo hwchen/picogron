@@ -146,7 +146,7 @@ fn writeStack(stack: []StackItem, wtr: anytype) !void {
                     if (a.bracket) {
                         try wtr.print("[\"{s}\"][{d}]", .{ n, a.curr_idx.? });
                     } else {
-                        try wtr.print("{s}[{d}]", .{ n, a.curr_idx.? });
+                        try wtr.print(".{s}[{d}]", .{ n, a.curr_idx.? });
                     }
                 } else {
                     try wtr.print("[{d}]", .{a.curr_idx.?});
