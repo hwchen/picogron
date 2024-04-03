@@ -41,10 +41,10 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
         // write value
         switch (token) {
             .end_of_document => break,
-            .true => try stdout.print(" = true\n", .{}),
-            .false => try stdout.print(" = false\n", .{}),
-            .null => try stdout.print(" = null\n", .{}),
-            .number, .allocated_number => |n| try stdout.print(" = {s}\n", .{n}),
+            .true => try stdout.print(" = true;\n", .{}),
+            .false => try stdout.print(" = false;\n", .{}),
+            .null => try stdout.print(" = null;\n", .{}),
+            .number, .allocated_number => |n| try stdout.print(" = {s};\n", .{n}),
             // Could be just a string, or a kv
             .string, .allocated_string => |s| {
                 switch (stack.getLast()) {
@@ -53,22 +53,22 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                         switch (val) {
                             .end_of_document => break,
                             .number, .allocated_number => |v| {
-                                try stdout.print("{s} = {s}\n", .{ s, v });
+                                try stdout.print("{s} = {s};\n", .{ s, v });
                             },
                             .string, .allocated_string => |v| {
-                                try stdout.print("{s} = \"{s}\"\n", .{ s, v });
+                                try stdout.print("{s} = \"{s}\";\n", .{ s, v });
                             },
-                            .true => try stdout.print("{s} = true\n", .{s}),
-                            .false => try stdout.print("{s} = false\n", .{s}),
-                            .null => try stdout.print("{s} = null\n", .{s}),
+                            .true => try stdout.print("{s} = true;\n", .{s}),
+                            .false => try stdout.print("{s} = false;\n", .{s}),
+                            .null => try stdout.print("{s} = null;\n", .{s}),
                             .object_begin => {
-                                try stdout.print("{s} = {{}}\n", .{s});
+                                try stdout.print("{s} = {{}};\n", .{s});
                                 // TODO copy memory better
                                 const k = try fmt.allocPrint(stack_alloc, "{s}", .{s});
                                 try stack.append(.{ .object_begin = k });
                             },
                             .array_begin => {
-                                try stdout.print("{s} = []\n", .{s});
+                                try stdout.print("{s} = [];\n", .{s});
                                 const v = try fmt.allocPrint(stack_alloc, "{s}", .{s});
                                 try stack.append(.{ .array_begin = .{ .name = v } });
                             },
@@ -89,16 +89,16 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                     },
                     else => {
                         // just a string
-                        try stdout.print(" = \"{s}\"\n", .{s});
+                        try stdout.print(" = \"{s}\";\n", .{s});
                     },
                 }
             },
             .object_begin => {
-                try stdout.print(" = {{}}\n", .{});
+                try stdout.print(" = {{}};\n", .{});
                 try stack.append(.{ .object_begin = null });
             },
             .array_begin => {
-                try stdout.print(" = []\n", .{});
+                try stdout.print(" = [];\n", .{});
                 try stack.append(.{ .array_begin = .{} });
             },
             .object_end => {
