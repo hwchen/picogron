@@ -20,6 +20,22 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
         const val_is_arr = mem.eql(u8, val, "[]");
         const path_is_arr = path[path.len - 1] == ']';
         const path_is_nonroot = !mem.eql(u8, path, "json");
+        const path_nest = pathNest(path);
+        const prev_path_nest = pathNest(prev_path);
+
+        // Try to end objects and arrays
+        if (path_nest < prev_path_nest) {
+            if (prev_path[prev_path.len - 1] == ']') {
+                try jws.endArray();
+            } else {
+                try jws.endObject();
+            }
+        }
+        // TODO memcopy
+        prev_path = try std.fmt.bufPrint(&prev_path_buf, "{s}", .{path});
+        try bw.flush();
+
+        // write fields and values
         if (path_is_nonroot and !path_is_arr) {
             // assumes that fields do not contain periods
             var path_it = mem.splitBackwardsSequence(u8, path, ".");
@@ -34,16 +50,16 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
         } else {
             try jws.write(val);
         }
-        // Can track previous path to see if something was popped
-        if (path.len < prev_path.len and !val_is_obj and !val_is_arr) {
-            if (path[path.len - 1] == ']') {
-                try jws.endArray();
-            } else {
-                try jws.endObject();
-            }
-        }
-        // TODO memcopy
-        prev_path = try std.fmt.bufPrint(&prev_path_buf, "{s}", .{path});
         try bw.flush();
     }
+}
+
+fn pathNest(path: []const u8) usize {
+    var sum: usize = 0;
+    for (path) |c| {
+        if (c == '.' or c == '[') {
+            sum += 1;
+        }
+    }
+    return sum;
 }
