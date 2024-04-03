@@ -8,8 +8,8 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
     const stdout = bw.writer();
     var jws = std.json.writeStream(stdout, .{});
 
-    var prev_path_buf: [1024]u8 = undefined;
-    var prev_path = try std.fmt.bufPrint(&prev_path_buf, "json", .{});
+    var prev_path_nest: u32 = 0;
+    var prev_path_is_arr = false;
     var line_buf: [1024]u8 = undefined;
     while (try input.readUntilDelimiterOrEof(&line_buf, '\n')) |line_raw| {
         const line = mem.trimRight(u8, line_raw, ";");
@@ -18,29 +18,25 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
         const path = path_val_it.next().?;
         const val_is_obj = mem.eql(u8, val, "{}");
         const val_is_arr = mem.eql(u8, val, "[]");
-        const path_is_arr = path[path.len - 1] == ']';
-        const path_is_nonroot = !mem.eql(u8, path, "json");
-        const path_nest = pathNest(path);
-        const prev_path_nest = pathNest(prev_path);
+        const path_info = parsePath(path);
+        const last_field = path_info.last_field;
 
         // Try to end objects and arrays
-        if (path_nest < prev_path_nest) {
-            if (prev_path[prev_path.len - 1] == ']') {
+        if (path_info.nest < prev_path_nest) {
+            if (prev_path_is_arr) {
                 try jws.endArray();
             } else {
                 try jws.endObject();
             }
         }
-        // TODO memcopy
-        prev_path = try std.fmt.bufPrint(&prev_path_buf, "{s}", .{path});
+        prev_path_nest = path_info.nest;
+        prev_path_is_arr = path_info.last_field == .array;
+
         try bw.flush();
 
         // write fields and values
-        if (path_is_nonroot and !path_is_arr) {
-            // assumes that fields do not contain periods
-            var path_it = mem.splitBackwardsSequence(u8, path, ".");
-            const key = path_it.next().?;
-            try jws.objectField(key);
+        if (last_field == .object or last_field == .object_in_brackets) {
+            try jws.objectField(path_info.last_field_str);
         }
         if (val_is_obj) {
             try jws.beginObject();
@@ -74,13 +70,68 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
     }
 }
 
-// TODO: don't count periods inside of quoted idents
-fn pathNest(path: []const u8) usize {
-    var sum: usize = 0;
-    for (path) |c| {
-        if (c == '.' or c == '[') {
-            sum += 1;
+const PathInfo = struct {
+    nest: u32,
+    last_field: LastField,
+    last_field_str: []const u8,
+};
+
+// simple parsing
+// TODO handle escaped quotes
+fn parsePath(path: []const u8) PathInfo {
+    std.debug.assert(mem.eql(u8, path[0..4], "json"));
+    var last_field: LastField = .root;
+    var nest: u32 = 0;
+    var is_in_quoted_string = false;
+    var is_in_square_brackets = false;
+    for (path[4..]) |c| {
+        switch (c) {
+            '\"' => {
+                is_in_quoted_string = !is_in_quoted_string;
+                if (is_in_quoted_string and is_in_square_brackets) {
+                    last_field = .object_in_brackets;
+                }
+            },
+            '.' => if (!is_in_quoted_string) {
+                nest += 1;
+            },
+            '[' => if (!is_in_quoted_string) {
+                is_in_square_brackets = true;
+                last_field = .array;
+                nest += 1;
+            },
+            ']' => if (!is_in_quoted_string) {
+                is_in_square_brackets = false;
+            },
+            else => if (!is_in_quoted_string and !is_in_square_brackets) {
+                last_field = .object;
+            },
         }
     }
-    return sum;
+    const last_field_str = switch (last_field) {
+        .root => &.{},
+        .array => &.{},
+        .object => blk: {
+            var it = mem.splitBackwardsSequence(u8, path, ".");
+            break :blk it.next().?;
+        },
+        .object_in_brackets => blk: {
+            var it = mem.splitBackwardsSequence(u8, path, "[");
+            const name_raw = it.next().?;
+            const name_trim_l = mem.trimLeft(u8, name_raw, "\"");
+            break :blk mem.trimRight(u8, name_trim_l, "\"]");
+        },
+    };
+    return PathInfo{
+        .nest = nest,
+        .last_field = last_field,
+        .last_field_str = last_field_str,
+    };
 }
+
+const LastField = enum {
+    root,
+    array,
+    object,
+    object_in_brackets,
+};
