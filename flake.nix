@@ -39,6 +39,10 @@
           zls
           pkgs.jq
           pkgs.fd
+
+          # for benchmarks
+          pkgs.gron
+          pkgs.hyperfine
         ];
       };
     });

@@ -13,3 +13,14 @@ roundtrip-diff json-file:
 
 roundtrip-test:
     \fd json testdata --exec just roundtrip-diff
+
+# TODO bench larger json files, or a variety
+bench-gorn-basic:
+    zig build -Doptimize=ReleaseSafe && hyperfine \
+    "./zig-out/bin/gorn < testdata/big.json > /dev/null" \
+    "gron < testdata/big.json > /dev/null"
+
+bench-roundtrip-basic *args="":
+    zig build -Doptimize=ReleaseSafe && hyperfine {{args}} \
+    "./zig-out/bin/gorn  < testdata/big.json | ./zig-out/bin/gorn -u > /dev/null" \
+    "gron  < testdata/big.json | gron -u > /dev/null"
