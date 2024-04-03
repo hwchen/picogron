@@ -52,7 +52,8 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
             const val_is_true = mem.eql(u8, val, "true");
             const val_is_false = mem.eql(u8, val, "false");
             if (val_is_string) {
-                try jws.write(val);
+                // trim quotes on ends
+                try jws.write(val[1 .. val.len - 2]);
             } else if (val_is_null) {
                 try jws.write(null);
             } else if (val_is_true) {
@@ -60,7 +61,6 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
             } else if (val_is_false) {
                 try jws.write(false);
             } else {
-                std.debug.print("{s}", .{val});
                 const n = try std.fmt.parseFloat(f64, val);
                 try jws.write(n);
             }
