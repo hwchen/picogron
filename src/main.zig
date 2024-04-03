@@ -80,13 +80,13 @@ fn gorn() !void {
                             .object_end => {
                                 // unwind stack to previous bracket + key
                                 const last = stack.pop();
-                                std.debug.assert(mem.eql(u8, @tagName(last), "object_begin"));
+                                std.debug.assert(std.meta.activeTag(last) == StackItem.object_begin);
                                 // TODO free
                             },
                             .array_end => {
                                 // unwind stack to previous bracket + key
                                 const last = stack.pop();
-                                std.debug.assert(mem.eql(u8, @tagName(last), "array_begin"));
+                                std.debug.assert(std.meta.activeTag(last) == StackItem.array_begin);
                                 // TODO free
                             },
                             else => return error.PartialValue,
@@ -109,13 +109,13 @@ fn gorn() !void {
             .object_end => {
                 // unwind stack to previous bracket + one
                 const last = stack.pop();
-                std.debug.assert(mem.eql(u8, @tagName(last), "object_begin"));
+                std.debug.assert(std.meta.activeTag(last) == StackItem.object_begin);
                 // TODO free
             },
             .array_end => {
                 // unwind stack to previous bracket
                 const last = stack.pop();
-                std.debug.assert(mem.eql(u8, @tagName(last), "array_begin"));
+                std.debug.assert(std.meta.activeTag(last) == StackItem.array_begin);
                 // TODO free
             },
             else => return error.PartialValue,
@@ -168,3 +168,5 @@ const StackItem = union(enum) {
         curr_idx: ?u64 = null,
     },
 };
+
+fn ungorn() !void {}
