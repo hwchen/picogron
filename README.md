@@ -18,5 +18,5 @@ Port of [gron](https://github.com/tomnomnom/gron)
 - preserving array indices by inserting null during ungorn
 
 ## TODO
-- Does gron handle periods in field names? Yes, do this.
+- Handle escaped quotes in quoted strings.
 - JSON float rendering (requires patch to std lib).

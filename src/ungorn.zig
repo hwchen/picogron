@@ -73,6 +73,7 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
 const PathInfo = struct {
     nest: u32,
     last_field: LastField,
+    // Only needed during lifetime of the path, no need to allocate
     last_field_str: []const u8,
 };
 
