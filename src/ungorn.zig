@@ -40,6 +40,6 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
         }
         // TODO memcopy
         prev_path = try std.fmt.bufPrint(&prev_path_buf, "{s}", .{path});
+        try bw.flush();
     }
-    try bw.flush();
 }
