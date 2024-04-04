@@ -10,9 +10,8 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
     const j_alloc = j_fba.allocator();
 
     // Used to temporarily allocate (and immediately free) parsed values
-    var val_buf: [2048]u8 = undefined;
-    var val_fba = std.heap.FixedBufferAllocator.init(&val_buf);
-    const val_alloc = val_fba.allocator();
+    var val_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    const val_alloc = val_arena.allocator();
 
     // tracks statement stack (nested levels, with object key)
     // TODO use gpa so we can free field name strings as needed?
@@ -135,7 +134,8 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
             else => return error.PartialValue,
         }
         try bw.flush();
-        val_fba.reset();
+        // Assumes that if we need to have space for large values once, we'll need it again
+        _ = val_arena.reset(.retain_capacity);
 
         // increase index if stack inside array
         //std.debug.print("{any}\n", .{stack.items});
