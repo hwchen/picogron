@@ -24,3 +24,6 @@ bench-roundtrip-basic *args="":
     zig build -Doptimize=ReleaseSafe && hyperfine {{args}} \
     "./zig-out/bin/gorn  < testdata/big.json | ./zig-out/bin/gorn -u > /dev/null" \
     "gron  < testdata/big.json | gron -u > /dev/null"
+
+diff-gron file:
+    zig build && diff <(cat {{file}} | ./zig-out/bin/gorn | sort) <(gron {{file}} | sort)
