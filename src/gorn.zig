@@ -47,29 +47,24 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
             .number, .allocated_number => |n| try stdout.print(" = {s};\n", .{n}),
             // Could be just a string, or a kv
             .string, .allocated_string => |s| {
-                if (std.meta.activeTag(token) == .allocated_string) {
-                    std.log.debug("json str, val_fba allocated: \"{s}\"", .{s});
-                } else {
-                    std.log.debug("json str, val_fba not allocated: \"{s}\"", .{s});
-                }
                 switch (stack.getLast()) {
                     .object_begin => {
                         // it's a kv
-                        std.log.debug("val_fba after k before v: {s}", .{val_fba.buffer[0..val_fba.end_index]});
-                        std.log.debug("key after k before v: {s}", .{s});
-                        const val = try jr.nextAlloc(val_alloc, .alloc_if_needed);
-                        std.log.debug("val_fba after alloc kv: {s}", .{val_fba.buffer[0..val_fba.end_index]});
-                        std.log.debug("key after alloc kv: {s}", .{s});
-                        if (shouldWriteLine(val)) {
-                            if (shouldBracketField(s)) {
-                                // may contain escaped characters
-                                _ = try stdout.write("[");
-                                try json.encodeJsonString(s, .{}, &stdout);
-                                _ = try stdout.write("]");
-                            } else {
-                                try stdout.print(".{s}", .{s});
-                            }
+
+                        // since the scanner buffer may be evicted during the nextAlloc call
+                        // to make way for new data, we need to write the key before the
+                        // nextAlloc call. We can assume that since we received an .object_begin,
+                        // we must write the key, otherwise the json is malformed.
+                        if (shouldBracketField(s)) {
+                            // may contain escaped characters
+                            _ = try stdout.write("[");
+                            try json.encodeJsonString(s, .{}, &stdout);
+                            _ = try stdout.write("]");
+                        } else {
+                            try stdout.print(".{s}", .{s});
                         }
+
+                        const val = try jr.nextAlloc(val_alloc, .alloc_if_needed);
                         switch (val) {
                             .end_of_document => break,
                             .number, .allocated_number => |v| {
