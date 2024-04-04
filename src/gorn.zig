@@ -52,7 +52,10 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                         const val = try jr.nextAlloc(val_alloc, .alloc_if_needed);
                         if (shouldWriteLine(val)) {
                             if (shouldBracketField(s)) {
-                                try stdout.print("[\"{s}\"]", .{s});
+                                // may contain escaped characters
+                                _ = try stdout.write("[");
+                                try json.encodeJsonString(s, .{}, &stdout);
+                                _ = try stdout.write("]");
                             } else {
                                 try stdout.print(".{s}", .{s});
                             }
@@ -63,7 +66,10 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                                 try stdout.print(" = {s};\n", .{v});
                             },
                             .string, .allocated_string => |v| {
-                                try stdout.print(" = \"{s}\";\n", .{v});
+                                // Value may contain escaped sequences, so encode as json string
+                                _ = try stdout.write(" = ");
+                                try json.encodeJsonString(v, .{}, &stdout);
+                                _ = try stdout.write(";\n");
                             },
                             .true => try stdout.print(" = true;\n", .{}),
                             .false => try stdout.print(" = false;\n", .{}),
@@ -86,8 +92,10 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                         }
                     },
                     else => {
-                        // just a string
-                        try stdout.print(" = \"{s}\";\n", .{s});
+                        // just a string. Value may contain escaped sequences, so encode as json string
+                        _ = try stdout.write(" = ");
+                        try json.encodeJsonString(s, .{}, &stdout);
+                        _ = try stdout.write(";\n");
                     },
                 }
             },
@@ -142,7 +150,10 @@ fn writeStack(stack: []StackItem, wtr: anytype) !void {
             .object_begin => |o| {
                 if (o.name) |n| {
                     if (o.bracket) {
-                        try wtr.print("[\"{s}\"]", .{n});
+                        // may contain escaped characters
+                        _ = try wtr.write("[");
+                        try json.encodeJsonString(n, .{}, wtr);
+                        _ = try wtr.write("]");
                     } else {
                         try wtr.print(".{s}", .{n});
                     }
@@ -151,7 +162,10 @@ fn writeStack(stack: []StackItem, wtr: anytype) !void {
             .array_begin => |a| {
                 if (a.name) |n| {
                     if (a.bracket) {
-                        try wtr.print("[\"{s}\"][{d}]", .{ n, a.curr_idx.? });
+                        // may contain escaped characters
+                        _ = try wtr.write("[");
+                        try json.encodeJsonString(n, .{}, wtr);
+                        try wtr.print("][{d}]", .{a.curr_idx.?});
                     } else {
                         try wtr.print(".{s}[{d}]", .{ n, a.curr_idx.? });
                     }
