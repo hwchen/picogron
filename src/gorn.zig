@@ -78,6 +78,9 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                         const val = try jr.nextAlloc(val_alloc, .alloc_if_needed);
                         switch (val) {
                             .end_of_document => break,
+                            .true => try stdout.print(" = true;\n", .{}),
+                            .false => try stdout.print(" = false;\n", .{}),
+                            .null => try stdout.print(" = null;\n", .{}),
                             .number, .allocated_number => |v| {
                                 try stdout.print(" = {s};\n", .{v});
                             },
@@ -87,9 +90,6 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                                 try json.encodeJsonString(v, .{}, &stdout);
                                 _ = try stdout.write(";\n");
                             },
-                            .true => try stdout.print(" = true;\n", .{}),
-                            .false => try stdout.print(" = false;\n", .{}),
-                            .null => try stdout.print(" = null;\n", .{}),
                             .object_begin => {
                                 try stdout.print(" = {{}};\n", .{});
                                 const name = try stack_names_alloc.dupe(u8, s);
