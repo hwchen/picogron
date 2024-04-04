@@ -43,6 +43,9 @@
           # for benchmarks
           pkgs.gron
           pkgs.hyperfine
+
+          # for script to generate json
+          pkgs.nodejs-slim_21
         ];
       };
     });
