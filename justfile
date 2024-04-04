@@ -19,6 +19,8 @@ bench-basic:
     "./zig-out/bin/gorn < testdata/big.json > /dev/null" \
     "gron < testdata/big.json > /dev/null"
 
+# if perf permission denied: https://github.com/andrewrk/poop/issues/17
+# Can `sudo sysctl kernel.perf_event_paranoid=3`
 bench-poop file:
     zig build -Doptimize=ReleaseSafe && poop \
     "./zig-out/bin/gorn {{file}}" \
