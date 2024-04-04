@@ -1,5 +1,7 @@
 const std = @import("std");
 const mem = std.mem;
+const fs = std.fs;
+const io = std.io;
 const gorn = @import("gorn.zig");
 const ungorn = @import("ungorn.zig");
 
@@ -16,20 +18,30 @@ pub fn main() !void {
         if (mem.eql(u8, arg, "--ungorn") or mem.eql(u8, arg, "-u")) {
             opts.ungorn = true;
         } else {
-            // TODO clean errors
-            return error.UnsupportedCliFlag;
+            if (opts.filepath == null) {
+                opts.filepath = arg;
+            } else if (mem.eql(u8, arg[0..1], "-")) {
+                return error.UnsupportedCliArg;
+            } else {
+                return error.TooManyCliArg;
+            }
         }
     }
 
-    const stdin_file = std.io.getStdIn().reader();
+    const input = if (opts.filepath) |path| blk: {
+        const f = try fs.cwd().openFile(path, .{});
+        break :blk f.reader();
+    } else io.getStdIn().reader();
+
     const stdout_file = std.io.getStdOut().writer();
     if (opts.ungorn) {
-        try ungorn.ungorn(stdin_file, stdout_file);
+        try ungorn.ungorn(input, stdout_file);
     } else {
-        try gorn.gorn(stdin_file, stdout_file);
+        try gorn.gorn(input, stdout_file);
     }
 }
 
 const Opts = struct {
     ungorn: bool = false,
+    filepath: ?[]const u8 = null,
 };

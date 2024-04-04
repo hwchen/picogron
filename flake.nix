@@ -43,6 +43,7 @@
           # for benchmarks
           pkgs.gron
           pkgs.hyperfine
+          pkgs.poop
 
           # for script to generate json
           pkgs.nodejs-slim_21
