@@ -9,20 +9,29 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
     var j_fba = std.heap.FixedBufferAllocator.init(&j_buf);
     const j_alloc = j_fba.allocator();
 
-    // Used to temporarily allocate (and immediately free) parsed values
+    // Used to temporarily allocate (and immediately free) parsed values.
+    // Reset on each iteration of loop, as we don't need past parse values.
     var val_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     const val_alloc = val_arena.allocator();
 
-    // tracks statement stack (nested levels, with object key)
-    // TODO use gpa so we can free field name strings as needed?
-    var stack_gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const stack_alloc = stack_gpa.allocator();
-    defer {
-        _ = stack_gpa.deinit();
-    }
+    // tracks statement stack (but not the associate names, to ensure that the
+    // fba frees the names properly). Deinit not required.
+    var stack_buf: [512]u8 = undefined;
+    var stack_fba = std.heap.FixedBufferAllocator.init(&stack_buf);
+    const stack_alloc = stack_fba.allocator();
     var stack = std.ArrayList(StackItem).init(stack_alloc);
-    defer stack.deinit();
     try stack.append(.root);
+
+    // Note that fba will only free if the item is at the end of the stack
+    // (like a bump allocator). That's why this is kept separate from the stack_fba,
+    // so I don't have to make sure that e.g. a resizing of the stack will make it
+    // impossible to free the stack names.
+    //
+    // Should free a name after stack is popped. Because these names are pushed and
+    // popped stack-like, free should always succeed.
+    var stack_names_buf: [512]u8 = undefined;
+    var stack_names_fba = std.heap.FixedBufferAllocator.init(&stack_names_buf);
+    const stack_names_alloc = stack_names_fba.allocator();
 
     var bw = std.io.bufferedWriter(wtr);
     const stdout = bw.writer();
@@ -81,12 +90,12 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                             .object_begin => {
                                 try stdout.print(" = {{}};\n", .{});
                                 // TODO copy memory better
-                                const name = try fmt.allocPrint(stack_alloc, "{s}", .{s});
+                                const name = try fmt.allocPrint(stack_names_alloc, "{s}", .{s});
                                 try stack.append(.{ .object_begin = .{ .name = name, .bracket = shouldBracketField(name) } });
                             },
                             .array_begin => {
                                 try stdout.print(" = [];\n", .{});
-                                const name = try fmt.allocPrint(stack_alloc, "{s}", .{s});
+                                const name = try fmt.allocPrint(stack_names_alloc, "{s}", .{s});
                                 try stack.append(.{ .array_begin = .{ .name = name, .bracket = shouldBracketField(name) } });
                             },
                             .object_end, .array_end => {
@@ -116,7 +125,7 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                 const last = stack.pop();
                 switch (last) {
                     .object_begin => |o| if (o.name) |name| {
-                        stack_alloc.free(name);
+                        stack_names_alloc.free(name);
                     },
                     else => unreachable,
                 }
@@ -126,7 +135,7 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                 const last = stack.pop();
                 switch (last) {
                     .array_begin => |a| if (a.name) |name| {
-                        stack_alloc.free(name);
+                        stack_names_alloc.free(name);
                     },
                     else => unreachable,
                 }
@@ -138,7 +147,6 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
         _ = val_arena.reset(.retain_capacity);
 
         // increase index if stack inside array
-        //std.debug.print("{any}\n", .{stack.items});
         switch (stack.items[stack.items.len - 1]) {
             .array_begin => |*a| {
                 if (a.curr_idx) |*curr_idx| {
