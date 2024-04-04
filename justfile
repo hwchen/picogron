@@ -13,10 +13,6 @@ roundtrip json-file:
 roundtrip-diff json-file:
     zig build && diff <(cat {{json-file}} | ./zig-out/bin/gorn | ./zig-out/bin/gorn -u) <(cat {{json-file}} | jq -c)
 
-# Test stream separately
-roundtrip-test:
-    \fd json testdata --exclude "*stream*" --exec just roundtrip-diff
-
 # TODO bench larger json files, or a variety
 bench-basic:
     zig build -Doptimize=ReleaseSafe && hyperfine \
@@ -33,5 +29,18 @@ bench-basic-roundtrip *args="":
     "./zig-out/bin/gorn  < testdata/big.json | ./zig-out/bin/gorn -u > /dev/null" \
     "gron  < testdata/big.json | gron -u > /dev/null"
 
+# gron appears to sort differently than `sort`, double check this?
 diff-gron file:
     zig build && diff <(cat {{file}} | ./zig-out/bin/gorn | sort) <(gron {{file}} | sort)
+
+# Test stream separately
+test-roundtrip:
+    \fd json testdata --exclude "*stream*" --exec just roundtrip-diff
+
+# Test stream separately
+test-vs-gron:
+    \fd json testdata --exclude "*stream*" --exec just diff-gron
+
+# Test stream separately
+#test-vs-ungron:
+#    \fd json testdata --exclude "*stream*" --exec just diff-ungron
