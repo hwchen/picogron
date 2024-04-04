@@ -13,8 +13,9 @@ roundtrip json-file:
 roundtrip-diff json-file:
     zig build && diff <(cat {{json-file}} | ./zig-out/bin/gorn | ./zig-out/bin/gorn -u) <(cat {{json-file}} | jq -c)
 
+# Test stream separately
 roundtrip-test:
-    \fd json testdata --exec just roundtrip-diff
+    \fd json testdata --exclude "*stream*" --exec just roundtrip-diff
 
 # TODO bench larger json files, or a variety
 bench-basic:
