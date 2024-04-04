@@ -13,15 +13,15 @@ Features implemented on an as-needed basis, but this will probably stay minimal.
 - streaming parsing. Instead of reading an entire input at once, the parser pulls to a buffer incrementally.
 - low memory overhead. A result of minimal and streaming parsing, as well as careful usage of allocators only where needed.
 
-## Features not planned
+## Features maybe planned
 - json stream input (well... maybe if the need comes up)
+- complete support for checking if field names are json identifiers. (i.e. an emoji may be rendered as `json["ಠ_ಠ"] = "yarly";` instead of `json.ಠ_ಠ = "yarly";`)
+- Handle escaped quotes in quoted strings when parsing javascript property accessor notation (in ungorn).
+
+## Features not planned
 - sort
 - color
 - read directly from url
 - values only
 - json stream output format
 - preserving array indices by inserting null during ungorn
-- complete support for checking if field names are json identifiers. (i.e. an emoji may be rendered as `json["ಠ_ಠ"] = "yarly";` instead of `json.ಠ_ಠ = "yarly";`)
-
-## TODO
-- Handle escaped quotes in quoted strings when parsing javascript property accessor notation (in ungorn).
