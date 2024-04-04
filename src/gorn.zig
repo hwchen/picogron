@@ -47,9 +47,19 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
             .number, .allocated_number => |n| try stdout.print(" = {s};\n", .{n}),
             // Could be just a string, or a kv
             .string, .allocated_string => |s| {
+                if (std.meta.activeTag(token) == .allocated_string) {
+                    std.log.debug("json str, val_fba allocated: \"{s}\"", .{s});
+                } else {
+                    std.log.debug("json str, val_fba not allocated: \"{s}\"", .{s});
+                }
                 switch (stack.getLast()) {
                     .object_begin => {
+                        // it's a kv
+                        std.log.debug("val_fba after k before v: {s}", .{val_fba.buffer[0..val_fba.end_index]});
+                        std.log.debug("key after k before v: {s}", .{s});
                         const val = try jr.nextAlloc(val_alloc, .alloc_if_needed);
+                        std.log.debug("val_fba after alloc kv: {s}", .{val_fba.buffer[0..val_fba.end_index]});
+                        std.log.debug("key after alloc kv: {s}", .{s});
                         if (shouldWriteLine(val)) {
                             if (shouldBracketField(s)) {
                                 // may contain escaped characters
@@ -78,13 +88,11 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                                 try stdout.print(" = {{}};\n", .{});
                                 // TODO copy memory better
                                 const name = try fmt.allocPrint(stack_alloc, "{s}", .{s});
-                                std.log.debug("allocated {s} from {s}", .{ name, s });
                                 try stack.append(.{ .object_begin = .{ .name = name, .bracket = shouldBracketField(name) } });
                             },
                             .array_begin => {
                                 try stdout.print(" = [];\n", .{});
                                 const name = try fmt.allocPrint(stack_alloc, "{s}", .{s});
-                                std.log.debug("allocated {s} from {s}", .{ name, s });
                                 try stack.append(.{ .array_begin = .{ .name = name, .bracket = shouldBracketField(name) } });
                             },
                             .object_end, .array_end => {
@@ -114,7 +122,6 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                 const last = stack.pop();
                 switch (last) {
                     .object_begin => |o| if (o.name) |name| {
-                        std.log.debug("freed {s}", .{name});
                         stack_alloc.free(name);
                     },
                     else => unreachable,
@@ -125,7 +132,6 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                 const last = stack.pop();
                 switch (last) {
                     .array_begin => |a| if (a.name) |name| {
-                        std.log.debug("freed {s}", .{name});
                         stack_alloc.free(name);
                     },
                     else => unreachable,
@@ -210,7 +216,10 @@ fn shouldBracketField(s: []const u8) bool {
     for (s) |c| {
         switch (c) {
             'a'...'z', 'A'...'Z', '0'...'9', '_' => {},
-            else => return true,
+            else => {
+                std.log.debug("shouldBracketField: {s}", .{s});
+                return true;
+            },
         }
     }
     return false;
