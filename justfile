@@ -19,10 +19,10 @@ bench-basic:
     "./zig-out/bin/gorn < testdata/big.json > /dev/null" \
     "gron < testdata/big.json > /dev/null"
 
-bench-basic-poop:
+bench-poop file:
     zig build -Doptimize=ReleaseSafe && poop \
-    "./zig-out/bin/gorn testdata/big.json" \
-    "gron testdata/big.json"
+    "./zig-out/bin/gorn {{file}}" \
+    "gron {{file}}"
 
 bench-large-line:
     zig build -Doptimize=ReleaseSafe && hyperfine \
