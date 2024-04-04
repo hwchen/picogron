@@ -1,5 +1,6 @@
 const std = @import("std");
 const mem = std.mem;
+const math = std.math;
 
 pub fn ungorn(rdr: anytype, wtr: anytype) !void {
     var br = std.io.bufferedReader(rdr);
@@ -20,8 +21,9 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
     try stack.append(.root);
 
     var prev_path_nest: u32 = 0;
-    var line_buf: [1024]u8 = undefined;
-    while (try input.readUntilDelimiterOrEof(&line_buf, '\n')) |line_raw| {
+    var line_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    const line_alloc = line_arena.allocator();
+    while (try input.readUntilDelimiterOrEofAlloc(line_alloc, '\n', math.maxInt(u32))) |line_raw| {
         const line = mem.trimRight(u8, line_raw, ";");
         var path_val_it = mem.splitBackwardsSequence(u8, line, " = ");
         const val = path_val_it.next().?;
@@ -81,6 +83,8 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
             }
         }
         try bw.flush();
+        // Assumes that if we need to have space for large values once, we'll need it again
+        _ = line_arena.reset(.retain_capacity);
     }
 
     // Close any remaining objects or arrays

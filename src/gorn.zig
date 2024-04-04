@@ -211,10 +211,7 @@ fn shouldBracketField(s: []const u8) bool {
     for (s) |c| {
         switch (c) {
             'a'...'z', 'A'...'Z', '0'...'9', '_' => {},
-            else => {
-                std.log.debug("shouldBracketField: {s}", .{s});
-                return true;
-            },
+            else => return true,
         }
     }
     return false;
