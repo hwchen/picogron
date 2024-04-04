@@ -27,9 +27,12 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
     // so I don't have to make sure that e.g. a resizing of the stack will make it
     // impossible to free the stack names.
     //
+    // Assumes that key names are generally not that big, and nesting is not that
+    // deep. Could probably increase buffer size even more without penalty.
+    //
     // Should free a name after stack is popped. Because these names are pushed and
     // popped stack-like, free should always succeed.
-    var stack_names_buf: [512]u8 = undefined;
+    var stack_names_buf: [4096]u8 = undefined;
     var stack_names_fba = std.heap.FixedBufferAllocator.init(&stack_names_buf);
     const stack_names_alloc = stack_names_fba.allocator();
 
