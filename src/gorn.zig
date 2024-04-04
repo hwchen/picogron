@@ -78,11 +78,13 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                                 try stdout.print(" = {{}};\n", .{});
                                 // TODO copy memory better
                                 const name = try fmt.allocPrint(stack_alloc, "{s}", .{s});
+                                std.log.debug("allocated {s} from {s}", .{ name, s });
                                 try stack.append(.{ .object_begin = .{ .name = name, .bracket = shouldBracketField(name) } });
                             },
                             .array_begin => {
                                 try stdout.print(" = [];\n", .{});
                                 const name = try fmt.allocPrint(stack_alloc, "{s}", .{s});
+                                std.log.debug("allocated {s} from {s}", .{ name, s });
                                 try stack.append(.{ .array_begin = .{ .name = name, .bracket = shouldBracketField(name) } });
                             },
                             .object_end, .array_end => {
@@ -111,7 +113,10 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                 // unwind stack to previous bracket + one
                 const last = stack.pop();
                 switch (last) {
-                    .object_begin => |o| if (o.name) |name| stack_alloc.free(name),
+                    .object_begin => |o| if (o.name) |name| {
+                        std.log.debug("freed {s}", .{name});
+                        stack_alloc.free(name);
+                    },
                     else => unreachable,
                 }
             },
@@ -119,7 +124,10 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                 // unwind stack to previous bracket
                 const last = stack.pop();
                 switch (last) {
-                    .array_begin => |a| if (a.name) |name| stack_alloc.free(name),
+                    .array_begin => |a| if (a.name) |name| {
+                        std.log.debug("freed {s}", .{name});
+                        stack_alloc.free(name);
+                    },
                     else => unreachable,
                 }
             },
