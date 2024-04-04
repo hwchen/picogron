@@ -21,7 +21,7 @@ Features implemented on an as-needed basis, but this will probably stay minimal.
 - values only
 - json stream output format
 - preserving array indices by inserting null during ungorn
-- complete support for checking if field names are json identifiers.
+- complete support for checking if field names are json identifiers. (i.e. an emoji may be rendered as `json["ಠ_ಠ"] = "yarly";` instead of `json.ಠ_ಠ = "yarly";`)
 
 ## TODO
 - Handle escaped quotes in quoted strings when parsing javascript property accessor notation (in ungorn).
