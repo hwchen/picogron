@@ -1,3 +1,5 @@
+set shell := ["bash", "-uc"]
+
 gorn file:
     cat {{file}} | zig build run
 
