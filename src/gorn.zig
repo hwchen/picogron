@@ -207,10 +207,17 @@ fn shouldWriteLine(token: json.Token) bool {
     };
 }
 
+// Javascript identifiers do not need to be bracketed. Field names do not need to conform to
+// javascript ident standards; non-js-idents are bracketed, while js-idents are written using
+// dot notation.
+//
+// Full javascript identifier support not currently planned, I just check some basic ascii sloppily.
+//
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#identifiers
 fn shouldBracketField(s: []const u8) bool {
     for (s) |c| {
         switch (c) {
-            'a'...'z', 'A'...'Z', '0'...'9', '_' => {},
+            'a'...'z', 'A'...'Z', '0'...'9', '_', '$' => {},
             else => return true,
         }
     }
