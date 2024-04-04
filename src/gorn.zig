@@ -92,13 +92,12 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
                             .null => try stdout.print(" = null;\n", .{}),
                             .object_begin => {
                                 try stdout.print(" = {{}};\n", .{});
-                                // TODO copy memory better
-                                const name = try fmt.allocPrint(stack_names_alloc, "{s}", .{s});
+                                const name = try stack_names_alloc.dupe(u8, s);
                                 try stack.append(.{ .object_begin = .{ .name = name, .bracket = shouldBracketField(name) } });
                             },
                             .array_begin => {
                                 try stdout.print(" = [];\n", .{});
-                                const name = try fmt.allocPrint(stack_names_alloc, "{s}", .{s});
+                                const name = try stack_names_alloc.dupe(u8, s);
                                 try stack.append(.{ .array_begin = .{ .name = name, .bracket = shouldBracketField(name) } });
                             },
                             .object_end, .array_end => {
