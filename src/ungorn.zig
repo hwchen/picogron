@@ -122,8 +122,19 @@ fn parsePath(path: []const u8) PathInfo {
     var nest: u32 = 0;
     var is_in_quoted_string = false;
     var is_in_square_brackets = false;
-    for (path[4..]) |c| {
+    var i: usize = 4;
+    while (i < path.len) {
+        const c = path[i];
         switch (c) {
+            '\\' => {
+                // we only care about escaped double quotes, which
+                // are important for nesting. For those, we want
+                // to skip counting them for nesting, so do an
+                // extra increment.
+                if (i < path.len - 1 and path[i + 1] == '\"') {
+                    i += 1;
+                }
+            },
             '\"' => {
                 is_in_quoted_string = !is_in_quoted_string;
                 if (is_in_quoted_string and is_in_square_brackets) {
@@ -145,7 +156,9 @@ fn parsePath(path: []const u8) PathInfo {
                 last_field = .object;
             },
         }
+        i += 1;
     }
+    // Re-parse the last field string now that we know what type it is.
     const last_field_str = switch (last_field) {
         .root => &.{},
         .array => &.{},
