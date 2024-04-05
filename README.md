@@ -17,6 +17,8 @@ Features implemented on an as-needed basis, but this will probably stay minimal.
 - json stream input (well... maybe if the need comes up)
 - complete support for checking if field names are json identifiers. (i.e. an emoji may be rendered as `json["ಠ_ಠ"] = "yarly";` instead of `json.ಠ_ಠ = "yarly";`)
 - Handle escaped quotes in quoted strings when parsing javascript property accessor notation (in ungorn).
+- flag for compact output
+- fuzz testing
 
 ## Features not planned
 - sort
