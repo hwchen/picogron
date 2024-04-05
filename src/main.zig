@@ -3,10 +3,10 @@ const mem = std.mem;
 const fs = std.fs;
 const io = std.io;
 const gorn = @import("gorn.zig");
+const gorn_stream = @import("gorn_stream.zig");
 const ungorn = @import("ungorn.zig");
 
 pub fn main() !void {
-    // Used to track nesting levels for json parser
     var arg_buf: [512]u8 = undefined;
     var arg_fba = std.heap.FixedBufferAllocator.init(&arg_buf);
     const arg_alloc = arg_fba.allocator();
@@ -17,6 +17,8 @@ pub fn main() !void {
     while (args.next()) |arg| {
         if (mem.eql(u8, arg, "--ungorn") or mem.eql(u8, arg, "-u")) {
             opts.ungorn = true;
+        } else if (mem.eql(u8, arg, "--stream") or mem.eql(u8, arg, "-s")) {
+            opts.stream = true;
         } else {
             if (opts.filepath == null) {
                 opts.filepath = arg;
@@ -36,12 +38,15 @@ pub fn main() !void {
     const stdout_file = std.io.getStdOut().writer();
     if (opts.ungorn) {
         try ungorn.ungorn(input, stdout_file);
+    } else if (opts.stream) {
+        try gorn_stream.gornStream(input, stdout_file);
     } else {
-        try gorn.gorn(input, stdout_file);
+        try gorn.gorn(input, stdout_file, .{});
     }
 }
 
 const Opts = struct {
     ungorn: bool = false,
+    stream: bool = false,
     filepath: ?[]const u8 = null,
 };

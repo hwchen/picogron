@@ -3,7 +3,7 @@ const json = std.json;
 const mem = std.mem;
 const fmt = std.fmt;
 
-pub fn gorn(rdr: anytype, wtr: anytype) !void {
+pub fn gorn(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
     // Used to track nesting levels for json parser
     var j_buf: [512]u8 = undefined;
     var j_fba = std.heap.FixedBufferAllocator.init(&j_buf);
@@ -20,7 +20,7 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
     var stack_fba = std.heap.FixedBufferAllocator.init(&stack_buf);
     const stack_alloc = stack_fba.allocator();
     var stack = std.ArrayList(StackItem).init(stack_alloc);
-    try stack.append(.root);
+    try stack.append(.{ .root = .{ .line_idx = stream_info.line_idx } });
 
     // Note that fba will only free if the item is at the end of the stack
     // (like a bump allocator). That's why this is kept separate from the stack_fba,
@@ -165,39 +165,41 @@ pub fn gorn(rdr: anytype, wtr: anytype) !void {
 fn writeStack(stack: []StackItem, wtr: anytype) !void {
     for (stack) |item| {
         switch (item) {
-            .root => try wtr.print("json", .{}),
-            .object_begin => |o| {
-                if (o.name) |n| {
-                    if (o.bracket) {
-                        // may contain escaped characters
-                        _ = try wtr.write("[");
-                        try json.encodeJsonString(n, .{}, wtr);
-                        _ = try wtr.write("]");
-                    } else {
-                        try wtr.print(".{s}", .{n});
-                    }
+            .root => |r| if (r.line_idx) |idx| {
+                try wtr.print("json[{d}]", .{idx});
+            } else {
+                try wtr.print("json", .{});
+            },
+            .object_begin => |o| if (o.name) |n| {
+                if (o.bracket) {
+                    // may contain escaped characters
+                    _ = try wtr.write("[");
+                    try json.encodeJsonString(n, .{}, wtr);
+                    _ = try wtr.write("]");
+                } else {
+                    try wtr.print(".{s}", .{n});
                 }
             },
-            .array_begin => |a| {
-                if (a.name) |n| {
-                    if (a.bracket) {
-                        // may contain escaped characters
-                        _ = try wtr.write("[");
-                        try json.encodeJsonString(n, .{}, wtr);
-                        try wtr.print("][{d}]", .{a.curr_idx.?});
-                    } else {
-                        try wtr.print(".{s}[{d}]", .{ n, a.curr_idx.? });
-                    }
+            .array_begin => |a| if (a.name) |n| {
+                if (a.bracket) {
+                    // may contain escaped characters
+                    _ = try wtr.write("[");
+                    try json.encodeJsonString(n, .{}, wtr);
+                    try wtr.print("][{d}]", .{a.curr_idx.?});
                 } else {
-                    try wtr.print("[{d}]", .{a.curr_idx.?});
+                    try wtr.print(".{s}[{d}]", .{ n, a.curr_idx.? });
                 }
+            } else {
+                try wtr.print("[{d}]", .{a.curr_idx.?});
             },
         }
     }
 }
 
 const StackItem = union(enum) {
-    root,
+    root: struct {
+        line_idx: ?usize = null,
+    },
     object_begin: struct {
         name: ?[]const u8 = null,
         bracket: bool = false,
@@ -233,3 +235,7 @@ fn shouldBracketField(s: []const u8) bool {
     }
     return false;
 }
+
+pub const StreamInfo = struct {
+    line_idx: ?usize = null,
+};
