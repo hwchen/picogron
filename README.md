@@ -16,7 +16,6 @@ Features implemented on an as-needed basis, but this will probably stay minimal.
 
 ## Features maybe planned
 - complete support for checking if field names are json identifiers. (i.e. an emoji may be rendered as `json["ಠ_ಠ"] = "yarly";` instead of `json.ಠ_ಠ = "yarly";`)
-- Handle escaped quotes in quoted strings when parsing javascript property accessor notation (in ungorn).
 
 ## Features not planned
 - sort
