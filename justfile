@@ -1,10 +1,11 @@
 set shell := ["bash", "-uc"]
 
-gorn file *args="":
-    cat {{file}} | zig build run -- {{args}}
+gorn *args="":
+    zig build run -- {{args}}
 
-ungorn file *args="":
-    cat {{file}} | zig build run -- -u {{args}}
+ungorn *args="":
+    zig build run -- -u {{args}}
+
 
 roundtrip file:
     cat {{file}} | zig build run | zig build run -- -u
@@ -33,10 +34,10 @@ bench-huge:
     "./zig-out/bin/gorn testdata/huge.json > /dev/null" \
     "gron testdata/huge.json > /dev/null"
 
-bench-basic-roundtrip *args="":
-    zig build -Doptimize=ReleaseSafe && hyperfine {{args}} \
-    "./zig-out/bin/gorn testdata/big.json | ./zig-out/bin/gorn -u > /dev/null" \
-    "gron testdata/big.json | gron -u > /dev/null"
+bench-roundtrip file:
+    zig build -Doptimize=ReleaseSafe && hyperfine \
+    "./zig-out/bin/gorn {{file}} | ./zig-out/bin/gorn -u > /dev/null" \
+    "gron {{file}} | gron -u > /dev/null"
 
 # gron appears to sort differently than `sort`, double check this?
 diff-gron file *args="":
