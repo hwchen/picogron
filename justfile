@@ -47,7 +47,7 @@ diff-roundtrip file:
     zig build && diff <(./zig-out/bin/gorn {{file}} | ./zig-out/bin/gorn -u) <(cat {{file}} | jq -c)
 
 test-roundtrip:
-    \fd json testdata --exclude "*stream*" --exec just roundtrip-diff
+    \fd json testdata --exclude "*stream*" --exec just diff-roundtrip
 
 # Test stream separately
 test-vs-gron:
