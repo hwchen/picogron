@@ -50,7 +50,16 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
 
         // write fields and values
         if (last_field == .object or last_field == .object_in_brackets) {
-            try jws.objectField(path_info.last_field_str);
+            const last_field_str = path_info.last_field_str;
+            if (path_info.last_field_contains_escapes) {
+                // This is a hack to allow objectField to write the escaped
+                // chars w/out double escaping. Uses line arena as it's
+                // reset every line anyways.
+                const unescaped = try unescape(last_field_str, line_alloc);
+                try jws.objectField(unescaped);
+            } else {
+                try jws.objectField(last_field_str);
+            }
         }
         if (val_is_obj) {
             try jws.beginObject();
@@ -105,6 +114,9 @@ const PathInfo = struct {
     // Only needed immediately after parsing. May return
     // garbage once this struct is put on a stack.
     last_field_str: []const u8,
+    // was bracketed, so contains non-ident chars. Maybe doesn't
+    // contain escapes, but it's a clearer naming than should_escape
+    last_field_contains_escapes: bool = false,
 };
 
 const LastField = enum {
@@ -158,6 +170,7 @@ fn parsePath(path: []const u8) PathInfo {
         }
         i += 1;
     }
+    var escapes = false;
     // Re-parse the last field string now that we know what type it is.
     const last_field_str = switch (last_field) {
         .root => &.{},
@@ -167,15 +180,46 @@ fn parsePath(path: []const u8) PathInfo {
             break :blk it.next().?;
         },
         .object_in_brackets => blk: {
+            escapes = true;
             var it = mem.splitBackwardsSequence(u8, path, "[");
             const name_raw = it.next().?;
-            const name_trim_l = mem.trimLeft(u8, name_raw, "\"");
-            break :blk mem.trimRight(u8, name_trim_l, "\"]");
+            // remove \" on left and right, and ] on right
+            break :blk name_raw[1 .. name_raw.len - 2];
         },
     };
     return PathInfo{
         .nest = nest,
         .last_field = last_field,
         .last_field_str = last_field_str,
+        .last_field_contains_escapes = escapes,
     };
+}
+
+// This is a hack to allow objectField to write the escaped
+// chars w/out double escaping. Might be slow as it appends
+// by char, but probably not that bad for this case. Plus should
+// be removed once json API is improved.
+fn unescape(s: []const u8, alloc: mem.Allocator) ![]const u8 {
+    var unescaped = std.ArrayList(u8).init(alloc);
+    var i: usize = 0;
+    while (i < s.len) {
+        const c = s[i];
+        if (c == '\\' and i + 1 < s.len) {
+            const escape_char = s[i + 1];
+            try unescaped.append(switch (escape_char) {
+                '"', '\\', '/' => escape_char,
+                'b' => 0x08,
+                'f' => 0x0c,
+                'n' => '\n',
+                'r' => '\r',
+                't' => '\t',
+                else => return error.UnsupportedEscapeCode,
+            });
+            i += 1;
+        } else {
+            try unescaped.append(c);
+        }
+        i += 1;
+    }
+    return unescaped.toOwnedSlice();
 }
