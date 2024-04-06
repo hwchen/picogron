@@ -2,5 +2,5 @@ zig-cache
 zig-out
 .envrc
 .direnv
-huge.json
-citylots.json
+huge.*on
+citylots.*on
