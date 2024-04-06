@@ -42,6 +42,7 @@
 
           # for benchmarks
           pkgs.gron
+          pkgs.fastgron
           pkgs.hyperfine
           pkgs.poop
 
