@@ -2,8 +2,16 @@ const std = @import("std");
 const json = std.json;
 const mem = std.mem;
 const fmt = std.fmt;
+const GenCatData = @import("GenCatData");
+const json_ident = @import("json_ident.zig");
 
 pub fn gorn(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
+    // Used to hold data for unicode processing (checking if string is
+    // javascript ident).
+    var gcd_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    const gcd_alloc = gcd_arena.allocator();
+    var gcd = try GenCatData.init(gcd_alloc);
+
     // Used to track nesting levels for json parser
     var j_buf: [512]u8 = undefined;
     var j_fba = std.heap.FixedBufferAllocator.init(&j_buf);
@@ -66,7 +74,7 @@ pub fn gorn(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
                         // to make way for new data, we need to write the key before the
                         // nextAlloc call. We can assume that since we received an .object_begin,
                         // we must write the key, otherwise the json is malformed.
-                        if (shouldBracketField(s)) {
+                        if (shouldBracketField(s, &gcd)) {
                             // may contain escaped characters
                             _ = try stdout.write("[");
                             try json.encodeJsonString(s, .{}, &stdout);
@@ -93,12 +101,12 @@ pub fn gorn(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
                             .object_begin => {
                                 try stdout.print(" = {{}};\n", .{});
                                 const name = try stack_names_alloc.dupe(u8, s);
-                                try stack.append(.{ .object_begin = .{ .name = name, .bracket = shouldBracketField(name) } });
+                                try stack.append(.{ .object_begin = .{ .name = name, .bracket = shouldBracketField(name, &gcd) } });
                             },
                             .array_begin => {
                                 try stdout.print(" = [];\n", .{});
                                 const name = try stack_names_alloc.dupe(u8, s);
-                                try stack.append(.{ .array_begin = .{ .name = name, .bracket = shouldBracketField(name) } });
+                                try stack.append(.{ .array_begin = .{ .name = name, .bracket = shouldBracketField(name, &gcd) } });
                             },
                             .object_end, .array_end => {
                                 return error.malformedJson;
@@ -223,17 +231,11 @@ fn shouldWriteLine(token: json.Token) bool {
 // javascript ident standards; non-js-idents are bracketed, while js-idents are written using
 // dot notation.
 //
-// Full javascript identifier support not currently planned, I just check some basic ascii sloppily.
-//
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#identifiers
-fn shouldBracketField(s: []const u8) bool {
-    for (s) |c| {
-        switch (c) {
-            'a'...'z', 'A'...'Z', '0'...'9', '_', '$' => {},
-            else => return true,
-        }
-    }
-    return false;
+fn shouldBracketField(s: []const u8, gcd: *GenCatData) bool {
+    const out = !json_ident.isJsIdent(s, gcd);
+    std.log.debug("shouldBracket {s}: {any}", .{ s, out });
+    return out;
 }
 
 pub const StreamInfo = struct {
