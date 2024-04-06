@@ -24,7 +24,7 @@ pub fn gorn(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
 
     // tracks statement stack (but not the associate names, to ensure that the
     // fba frees the names properly). Deinit not required.
-    var stack_buf: [512]u8 = undefined;
+    var stack_buf: [1024]u8 = undefined;
     var stack_fba = std.heap.FixedBufferAllocator.init(&stack_buf);
     const stack_alloc = stack_fba.allocator();
     var stack = std.ArrayList(StackItem).init(stack_alloc);
