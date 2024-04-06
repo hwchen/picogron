@@ -4,3 +4,4 @@ zig-out
 .direnv
 huge.*on
 citylots.*on
+perf.*

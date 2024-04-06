@@ -58,3 +58,6 @@ test-vs-gron-stream:
 # Test stream separately
 #test-vs-ungron:
 #    \fd json testdata --exclude "*stream*" --exec just diff-ungron
+
+perf-gorn file:
+    zig build -Doptimize=ReleaseSafe && perf record --call-graph dwarf ./zig-out/bin/gorn {{file}} > /dev/null
