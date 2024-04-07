@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const json = std.json;
 const mem = std.mem;
 const fmt = std.fmt;
@@ -152,7 +153,10 @@ pub fn gorn(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
             },
             else => return error.PartialValue,
         }
-        try bw.flush();
+        if (builtin.mode == .Debug) {
+            // flushing more often helps with debugging
+            try bw.flush();
+        }
         // Assumes that if we need to have space for large values once, we'll need it again
         _ = val_arena.reset(.retain_capacity);
 
@@ -168,6 +172,7 @@ pub fn gorn(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
             else => {},
         }
     }
+    try bw.flush();
 }
 
 fn writeStack(stack: []StackItem, wtr: anytype) !void {

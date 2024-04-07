@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const mem = std.mem;
 const math = std.math;
 
@@ -46,7 +47,10 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
         }
         prev_path_nest = path_info.nest;
 
-        try bw.flush();
+        if (builtin.mode == .Debug) {
+            // flushing more often helps with debugging
+            try bw.flush();
+        }
 
         // write fields and values
         if (last_field == .object or last_field == .object_in_brackets) {
