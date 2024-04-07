@@ -58,11 +58,11 @@ test-vs-gron-stream:
 #    \fd json testdata --exclude "*stream*" --exec just diff-ungron
 
 # can inspect results with `perf report`
-perf bin file:
-    perf record --call-graph dwarf {{bin}} {{file}} > /dev/null
+perf bin file *args="":
+    perf record --call-graph dwarf {{bin}} {{file}} {{args}} > /dev/null
 
-perf-gorn file:
-    zig build -Doptimize=ReleaseSafe && just perf ./zig-out/bin/gorn {{file}}
+perf-gorn file *args="":
+    zig build -Doptimize=ReleaseSafe && just perf ./zig-out/bin/gorn {{args}} {{file}}
 
 # stackcollapse-perf.pl and flamegraph.pl symlinked into path from flamegraph repo
 flamegraph:
