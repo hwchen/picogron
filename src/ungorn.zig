@@ -115,7 +115,6 @@ const LastField = enum {
 
 // simple parsing
 fn parsePath(line: []const u8) PathInfo {
-    std.debug.print("{s}\n", .{line});
     std.debug.assert(mem.eql(u8, line[0..4], "json"));
     var last_field: LastField = .root;
     var nest: u32 = 0;

@@ -72,16 +72,21 @@ pub fn gorn(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
                         // it's a kv
 
                         // since the scanner buffer may be evicted during the nextAlloc call
-                        // to make way for new data, we need to write the key before the
-                        // nextAlloc call. We can assume that since we received an .object_begin,
+                        // to make way for new data, we need to alloc the key before the
+                        // json nextAlloc call. Even though we can also write the key first
+                        // for certain lines, if the key = {} or [], we'll need to save the key
+                        // to the stack. But we won't know until nextAlloc is called.
+                        const key = try val_alloc.dupe(u8, s);
+
+                        // We can assume that since we received an .object_begin,
                         // we must write the key, otherwise the json is malformed.
-                        if (shouldBracketField(s, &gcd)) {
+                        if (shouldBracketField(key, &gcd)) {
                             // may contain escaped characters
                             _ = try stdout.write("[");
-                            try json.encodeJsonString(s, .{}, &stdout);
+                            try json.encodeJsonString(key, .{}, &stdout);
                             _ = try stdout.write("]");
                         } else {
-                            try stdout.print(".{s}", .{s});
+                            try stdout.print(".{s}", .{key});
                         }
 
                         const val = try jr.nextAlloc(val_alloc, .alloc_if_needed);
@@ -101,13 +106,13 @@ pub fn gorn(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
                             },
                             .object_begin => {
                                 try stdout.print(" = {{}};\n", .{});
-                                const name = try stack_names_alloc.dupe(u8, s);
-                                try stack.append(.{ .object_begin = .{ .name = name, .bracket = shouldBracketField(name, &gcd) } });
+                                const name = try stack_names_alloc.dupe(u8, key);
+                                try stack.append(.{ .object_begin = .{ .name = name, .bracket = shouldBracketField(key, &gcd) } });
                             },
                             .array_begin => {
                                 try stdout.print(" = [];\n", .{});
-                                const name = try stack_names_alloc.dupe(u8, s);
-                                try stack.append(.{ .array_begin = .{ .name = name, .bracket = shouldBracketField(name, &gcd) } });
+                                const name = try stack_names_alloc.dupe(u8, key);
+                                try stack.append(.{ .array_begin = .{ .name = name, .bracket = shouldBracketField(key, &gcd) } });
                             },
                             .object_end, .array_end => {
                                 return error.malformedJson;
