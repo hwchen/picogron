@@ -73,28 +73,9 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
             try jws.beginArray();
             try stack.append(.array);
         } else {
-            const val_is_string = val[0] == '\"';
-            const val_is_null = mem.eql(u8, val, "null");
-            const val_is_true = mem.eql(u8, val, "true");
-            const val_is_false = mem.eql(u8, val, "false");
-            if (val_is_string) {
-                // print exact, if using write will escape escape chars
-                try jws.print("{s}", .{val});
-            } else if (val_is_null) {
-                try jws.write(null);
-            } else if (val_is_true) {
-                try jws.write(true);
-            } else if (val_is_false) {
-                try jws.write(false);
-            } else {
-                if (std.fmt.parseInt(i64, val, 10)) |n| {
-                    try jws.write(n);
-                } else |_| if (std.fmt.parseFloat(f64, val)) |x| {
-                    try jws.print("{d}", .{x});
-                } else |_| {
-                    return error.NotJsonValue;
-                }
-            }
+            // if string, print exact, if using write will escape escape chars
+            // this also prints numbers, null, bools exactly as they were read.
+            try jws.print("{s}", .{val});
         }
         if (builtin.mode == .Debug) {
             // flushing more often helps with debugging
