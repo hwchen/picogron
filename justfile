@@ -3,8 +3,11 @@ set shell := ["bash", "-uc"]
 gorn *args="":
     zig build run -- {{args}}
 
+gorn-release *args="":
+    zig build run -Doptimize=ReleaseSafe -- {{args}}
+
 ungorn *args="":
-    zig build run -- -u {{args}}
+    zig build run -Doptimize=ReleaseSafe -- -u {{args}}
 
 
 roundtrip file:
