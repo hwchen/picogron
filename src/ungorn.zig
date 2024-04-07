@@ -24,7 +24,8 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
     var prev_path_nest: u32 = 0;
     var line_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     const line_alloc = line_arena.allocator();
-    while (try input.readUntilDelimiterOrEofAlloc(line_alloc, '\n', math.maxInt(u32))) |line_raw| {
+    var line_buf: [4096 * 10]u8 = undefined;
+    while (try input.readUntilDelimiterOrEof(&line_buf, '\n')) |line_raw| {
         const line = mem.trimRight(u8, line_raw, ";");
         var path_val_it = mem.splitBackwardsSequence(u8, line, " = ");
         const val = path_val_it.next().?;
