@@ -25,14 +25,11 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
     var line_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     const line_alloc = line_arena.allocator();
     var line_buf: [4096 * 1000]u8 = undefined;
-    while (try input.readUntilDelimiterOrEof(&line_buf, '\n')) |line_raw| {
-        const line = mem.trimRight(u8, line_raw, ";");
-        var path_val_it = mem.splitBackwardsSequence(u8, line, " = ");
-        const val = path_val_it.next().?;
-        const path = path_val_it.next().?;
+    while (try input.readUntilDelimiterOrEof(&line_buf, '\n')) |line| {
+        const path_info = parsePath(line);
+        const val = path_info.value;
         const val_is_obj = mem.eql(u8, val, "{}");
         const val_is_arr = mem.eql(u8, val, "[]");
-        const path_info = parsePath(path);
         const last_field = path_info.last_field;
 
         // Try to end objects and arrays
@@ -106,6 +103,7 @@ const PathInfo = struct {
     // was bracketed, so contains non-ident chars. Maybe doesn't
     // contain escapes, but it's a clearer naming than should_escape
     last_field_contains_escapes: bool = false,
+    value: []const u8,
 };
 
 const LastField = enum {
@@ -116,23 +114,28 @@ const LastField = enum {
 };
 
 // simple parsing
-// TODO handle escaped quotes
-fn parsePath(path: []const u8) PathInfo {
-    std.debug.assert(mem.eql(u8, path[0..4], "json"));
+fn parsePath(line: []const u8) PathInfo {
+    std.debug.print("{s}\n", .{line});
+    std.debug.assert(mem.eql(u8, line[0..4], "json"));
     var last_field: LastField = .root;
     var nest: u32 = 0;
     var is_in_quoted_string = false;
     var is_in_square_brackets = false;
+    var path_end: usize = 0;
     var i: usize = 4;
-    while (i < path.len) {
-        const c = path[i];
+    while (i < line.len) {
+        const c = line[i];
         switch (c) {
+            ' ' => {
+                path_end = i;
+                break;
+            },
             '\\' => {
                 // we only care about escaped double quotes, which
                 // are important for nesting. For those, we want
                 // to skip counting them for nesting, so do an
                 // extra increment.
-                if (i < path.len - 1 and path[i + 1] == '\"') {
+                if (i < line.len - 1 and line[i + 1] == '\"') {
                     i += 1;
                 }
             },
@@ -159,6 +162,7 @@ fn parsePath(path: []const u8) PathInfo {
         }
         i += 1;
     }
+    const path = line[0..path_end];
     var escapes = false;
     // Re-parse the last field string now that we know what type it is.
     const last_field_str = switch (last_field) {
@@ -181,6 +185,7 @@ fn parsePath(path: []const u8) PathInfo {
         .last_field = last_field,
         .last_field_str = last_field_str,
         .last_field_contains_escapes = escapes,
+        .value = line[path_end + 3 .. line.len - 1], // removes leading `=` and semicolon
     };
 }
 
