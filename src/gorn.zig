@@ -239,7 +239,6 @@ fn shouldWriteLine(token: json.Token) bool {
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#identifiers
 fn shouldBracketField(s: []const u8, gcd: *GenCatData) bool {
     const out = !json_ident.isJsIdent(s, gcd);
-    std.log.debug("shouldBracket {s}: {any}", .{ s, out });
     return out;
 }
 
