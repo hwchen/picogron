@@ -66,4 +66,4 @@ perf-gorn file *args="":
 
 # stackcollapse-perf.pl and flamegraph.pl symlinked into path from flamegraph repo
 flamegraph:
-    perf script | stackcollapse-perf.pl | flamegraph.pl > perf.svg && display perf.svg
+    perf script | stackcollapse-perf.pl | flamegraph.pl > perf.svg

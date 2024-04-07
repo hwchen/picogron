@@ -2,6 +2,7 @@ zig-cache
 zig-out
 .envrc
 .direnv
+big.gron
 huge.*on
 citylots.*on
 perf.*
