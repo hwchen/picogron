@@ -43,18 +43,14 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
         }
         prev_path_nest = path_info.nest;
 
-        comptime if (builtin.mode == .Debug) {
-            // flushing more often helps with debugging
-            try bw.flush();
-        };
+        // flushing more often helps with debugging
+        //try bw.flush();
 
         // write fields and values
-        if (last_field == .object or last_field == .object_in_brackets) {
-            if (path_info.last_field_contains_escapes) {
-                try jws.objectFieldRaw(path_info.last_field_str);
-            } else {
-                try jws.objectField(path_info.last_field_str);
-            }
+        switch (last_field) {
+            .object => try jws.objectField(path_info.last_field_str),
+            .object_in_brackets => try jws.objectFieldRaw(path_info.last_field_str),
+            else => {},
         }
         if (val_is_obj) {
             try jws.beginObject();
@@ -67,10 +63,8 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
             // this also prints numbers, null, bools exactly as they were read.
             try jws.print("{s}", .{val});
         }
-        comptime if (builtin.mode == .Debug) {
-            // flushing more often helps with debugging
-            try bw.flush();
-        };
+        // flushing more often helps with debugging
+        //try bw.flush();
     }
 
     // Close any remaining objects or arrays
