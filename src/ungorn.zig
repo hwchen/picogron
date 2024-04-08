@@ -124,6 +124,7 @@ fn parsePath(line: []const u8) PathInfo {
                 }
             },
             '.' => if (!is_in_quoted_string) {
+                last_field = .object;
                 nest += 1;
             },
             '[' => if (!is_in_quoted_string) {
@@ -134,9 +135,7 @@ fn parsePath(line: []const u8) PathInfo {
             ']' => if (!is_in_quoted_string) {
                 is_in_square_brackets = false;
             },
-            else => if (!is_in_quoted_string and !is_in_square_brackets) {
-                last_field = .object;
-            },
+            else => {},
         }
         i += 1;
     }
