@@ -4,10 +4,13 @@ gorn *args="":
     zig build run -- {{args}}
 
 gorn-release *args="":
-    zig build run -Doptimize=ReleaseSafe -- {{args}}
+    zig build run -Doptimize=ReleaseFast -- {{args}}
 
 ungorn *args="":
-    zig build run -Doptimize=ReleaseSafe -- -u {{args}}
+    zig build run -- -u {{args}}
+
+ungorn-release *args="":
+    zig build run -Doptimize=ReleaseFast -- -u {{args}}
 
 
 roundtrip file:
@@ -18,7 +21,7 @@ roundtrip file:
 # citylots.json is downloaded from https://github.com/zemirco/sf-city-lots-json/blob/master/citylots.json
 
 bench file *args="":
-    zig build -Doptimize=ReleaseSafe && poop \
+    zig build -Doptimize=ReleaseFast && poop \
     "./zig-out/bin/gorn {{args}} {{file}}" \
 
 # if perf permission denied: https://github.com/andrewrk/poop/issues/17
@@ -26,14 +29,14 @@ bench file *args="":
 # poop doesn't use shell, so can't use pipes etc.
 # Pass -u to test ungron
 bench-cmp file *args="":
-    zig build -Doptimize=ReleaseSafe && poop \
+    zig build -Doptimize=ReleaseFast && poop \
     "./zig-out/bin/gorn {{args}} {{file}}" \
     "fastgron {{args}} {{file}}" \
     "gron {{args}} {{file}}"
 
 # hyperfine uses shell, so can redirect with pipes
 bench-cmp-roundtrip file:
-    zig build -Doptimize=ReleaseSafe && hyperfine \
+    zig build -Doptimize=ReleaseFast && hyperfine \
     "./zig-out/bin/gorn {{file}} | ./zig-out/bin/gorn -u > /dev/null" \
     "fastgron {{file}} | fastgron -u > /dev/null" \
     "gron {{file}} | gron -u > /dev/null"
@@ -65,7 +68,7 @@ perf bin file *args="":
     perf record --call-graph dwarf {{bin}} {{file}} {{args}} > /dev/null
 
 perf-gorn file *args="":
-    zig build -Doptimize=ReleaseSafe && just perf ./zig-out/bin/gorn {{args}} {{file}}
+    zig build -Doptimize=ReleaseFast && just perf ./zig-out/bin/gorn {{args}} {{file}}
 
 # stackcollapse-perf.pl and flamegraph.pl symlinked into path from flamegraph repo
 flamegraph:
