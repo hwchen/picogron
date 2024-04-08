@@ -106,40 +106,45 @@ fn parsePath(line: []const u8) PathInfo {
     var i: usize = 4;
     while (i < line.len) {
         const c = line[i];
-        switch (c) {
-            ' ' => {
-                path_end = i;
-                break;
-            },
-            '\\' => {
-                // we only care about escaped double quotes, which
-                // are important for nesting. For those, we want
-                // to skip counting them for nesting, so do an
-                // extra increment.
-                if (i < line.len - 1 and line[i + 1] == '\"') {
-                    i += 1;
-                }
-            },
-            '\"' => {
-                is_in_quoted_string = !is_in_quoted_string;
-                if (is_in_quoted_string and is_in_square_brackets) {
-                    last_field = .object_in_brackets;
-                }
-            },
-            '.' => if (!is_in_quoted_string) {
-                nest += 1;
-            },
-            '[' => if (!is_in_quoted_string) {
-                is_in_square_brackets = true;
-                last_field = .array;
-                nest += 1;
-            },
-            ']' => if (!is_in_quoted_string) {
-                is_in_square_brackets = false;
-            },
-            else => if (!is_in_quoted_string and !is_in_square_brackets) {
-                last_field = .object;
-            },
+        if (is_in_quoted_string) {
+            switch (c) {
+                '\\' => {
+                    // we only care about escaped double quotes, which
+                    // are important for nesting. For those, we want
+                    // to skip counting them for nesting, so do an
+                    // extra increment.
+                    if (i < line.len - 1 and line[i + 1] == '\"') {
+                        i += 1;
+                    }
+                },
+                '\"' => {
+                    is_in_quoted_string = !is_in_quoted_string;
+                    if (is_in_square_brackets) {
+                        last_field = .object_in_brackets;
+                    }
+                },
+                else => {},
+            }
+        } else {
+            switch (c) {
+                ' ' => {
+                    path_end = i;
+                    break;
+                },
+                '.' => {
+                    last_field = .object;
+                    nest += 1;
+                },
+                '[' => {
+                    is_in_square_brackets = true;
+                    last_field = .array;
+                    nest += 1;
+                },
+                ']' => {
+                    is_in_square_brackets = false;
+                },
+                else => {},
+            }
         }
         i += 1;
     }
