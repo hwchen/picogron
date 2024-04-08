@@ -22,8 +22,6 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
     try stack.append(.root);
 
     var prev_path_nest: u32 = 0;
-    var line_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    const line_alloc = line_arena.allocator();
     var line_buf: [4096 * 1000]u8 = undefined;
     while (try input.readUntilDelimiterOrEof(&line_buf, '\n')) |line| {
         const path_info = parsePath(line);
@@ -52,15 +50,10 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
 
         // write fields and values
         if (last_field == .object or last_field == .object_in_brackets) {
-            const last_field_str = path_info.last_field_str;
             if (path_info.last_field_contains_escapes) {
-                // This is a hack to allow objectField to write the escaped
-                // chars w/out double escaping. Uses line arena as it's
-                // reset every line anyways.
-                const unescaped = try unescape(last_field_str, line_alloc);
-                try jws.objectField(unescaped);
+                try jws.objectFieldRaw(path_info.last_field_str);
             } else {
-                try jws.objectField(last_field_str);
+                try jws.objectField(path_info.last_field_str);
             }
         }
         if (val_is_obj) {
@@ -78,8 +71,6 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
             // flushing more often helps with debugging
             try bw.flush();
         }
-        // Assumes that if we need to have space for large values once, we'll need it again
-        _ = line_arena.reset(.retain_capacity);
     }
 
     // Close any remaining objects or arrays
@@ -175,8 +166,8 @@ fn parsePath(line: []const u8) PathInfo {
             escapes = true;
             var it = mem.splitBackwardsSequence(u8, path, "[");
             const name_raw = it.next().?;
-            // remove \" on left and right, and ] on right
-            break :blk name_raw[1 .. name_raw.len - 2];
+            // remove ] on right
+            break :blk name_raw[0 .. name_raw.len - 1];
         },
     };
     return PathInfo{
@@ -186,33 +177,4 @@ fn parsePath(line: []const u8) PathInfo {
         .last_field_contains_escapes = escapes,
         .value = line[path_end + 3 .. line.len - 1], // removes leading `=` and semicolon
     };
-}
-
-// This is a hack to allow objectField to write the escaped
-// chars w/out double escaping. Might be slow as it appends
-// by char, but probably not that bad for this case. Plus should
-// be removed once json API is improved.
-fn unescape(s: []const u8, alloc: mem.Allocator) ![]const u8 {
-    var unescaped = std.ArrayList(u8).init(alloc);
-    var i: usize = 0;
-    while (i < s.len) {
-        const c = s[i];
-        if (c == '\\' and i + 1 < s.len) {
-            const escape_char = s[i + 1];
-            try unescaped.append(switch (escape_char) {
-                '"', '\\', '/' => escape_char,
-                'b' => 0x08,
-                'f' => 0x0c,
-                'n' => '\n',
-                'r' => '\r',
-                't' => '\t',
-                else => return error.UnsupportedEscapeCode,
-            });
-            i += 1;
-        } else {
-            try unescaped.append(c);
-        }
-        i += 1;
-    }
-    return unescaped.toOwnedSlice();
 }
