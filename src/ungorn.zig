@@ -92,58 +92,42 @@ const LastField = enum {
     object_in_brackets,
 };
 
-// simple parsing
+// Simple parsing
+// Assumes correct gron input, will not check for malformed.
 fn parsePath(line: []const u8) PathInfo {
     std.debug.assert(mem.eql(u8, line[0..4], "json"));
     var last_field: LastField = .root;
     var nest: u32 = 0;
-    var is_in_quoted_string = false;
     var is_in_square_brackets = false;
     var path_end: usize = 0;
-    var i: usize = 4;
-    while (i < line.len) {
-        const c = line[i];
-        if (is_in_quoted_string) {
-            switch (c) {
-                '\\' => {
-                    // we only care about escaped double quotes, which
-                    // are important for nesting. For those, we want
-                    // to skip counting them for nesting, so do an
-                    // extra increment.
-                    if (i < line.len - 1 and line[i + 1] == '\"') {
-                        i += 1;
-                    }
-                },
-                '\"' => {
-                    is_in_quoted_string = !is_in_quoted_string;
-                    if (is_in_square_brackets) {
-                        last_field = .object_in_brackets;
-                    }
-                },
-                else => {},
-            }
-        } else {
-            switch (c) {
-                ' ' => {
-                    path_end = i;
-                    break;
-                },
-                '.' => {
-                    last_field = .object;
-                    nest += 1;
-                },
-                '[' => {
-                    is_in_square_brackets = true;
-                    last_field = .array;
-                    nest += 1;
-                },
-                ']' => {
-                    is_in_square_brackets = false;
-                },
-                else => {},
-            }
+    for (line, 0..) |c, idx| {
+        switch (c) {
+            '\"' => {
+                if (is_in_square_brackets) {
+                    last_field = .object_in_brackets;
+                }
+                if (idx > 0 and line[idx - 1] == '\\') {
+                    continue;
+                }
+            },
+            ' ' => {
+                path_end = idx;
+                break;
+            },
+            '.' => {
+                last_field = .object;
+                nest += 1;
+            },
+            '[' => {
+                is_in_square_brackets = true;
+                last_field = .array;
+                nest += 1;
+            },
+            ']' => {
+                is_in_square_brackets = false;
+            },
+            else => {},
         }
-        i += 1;
     }
     const path = line[0..path_end];
     // Re-parse the last field string now that we know what type it is.
