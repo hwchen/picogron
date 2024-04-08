@@ -15,10 +15,7 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
     // as it's only used immediately after parsing.
     // Currently uses difference in nesting level between two paths to know
     // how far back to pop.
-    var stack_buf: [1024]u8 = undefined;
-    var stack_fba = std.heap.FixedBufferAllocator.init(&stack_buf);
-    const stack_alloc = stack_fba.allocator();
-    var stack = std.ArrayList(LastField).init(stack_alloc);
+    var stack = try std.BoundedArray(LastField, 1024).init(0);
     try stack.append(.root);
 
     var prev_path_nest: u32 = 0;
