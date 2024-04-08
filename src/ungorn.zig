@@ -85,9 +85,6 @@ const PathInfo = struct {
     // Only needed immediately after parsing. May return
     // garbage once this struct is put on a stack.
     last_field_str: []const u8,
-    // was bracketed, so contains non-ident chars. Maybe doesn't
-    // contain escapes, but it's a clearer naming than should_escape
-    last_field_contains_escapes: bool = false,
     value: []const u8,
 };
 
@@ -147,7 +144,6 @@ fn parsePath(line: []const u8) PathInfo {
         i += 1;
     }
     const path = line[0..path_end];
-    var escapes = false;
     // Re-parse the last field string now that we know what type it is.
     const last_field_str = switch (last_field) {
         .root => &.{},
@@ -157,7 +153,6 @@ fn parsePath(line: []const u8) PathInfo {
             break :blk it.next().?;
         },
         .object_in_brackets => blk: {
-            escapes = true;
             var it = mem.splitBackwardsSequence(u8, path, "[");
             const name_raw = it.next().?;
             // remove ] on right
@@ -168,7 +163,6 @@ fn parsePath(line: []const u8) PathInfo {
         .nest = nest,
         .last_field = last_field,
         .last_field_str = last_field_str,
-        .last_field_contains_escapes = escapes,
         .value = line[path_end + 3 .. line.len - 1], // removes leading `=` and semicolon
     };
 }
