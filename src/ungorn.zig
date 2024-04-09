@@ -81,8 +81,8 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
 const PathInfo = struct {
     nest: u32,
     last_field: LastField,
-    // Only needed immediately after parsing. May return
-    // garbage once this struct is put on a stack.
+    // Only needed immediately after parsing. Lives as long
+    // as a line
     last_field_str: []const u8,
     value: []const u8,
 };
