@@ -41,7 +41,9 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
         prev_path_nest = path_info.nest;
 
         // flushing more often helps with debugging
-        //try bw.flush();
+        if (builtin.mode == .Debug) {
+            try bw.flush();
+        }
 
         // write fields and values
         switch (last_field) {
@@ -61,7 +63,9 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
             try jws.print("{s}", .{val});
         }
         // flushing more often helps with debugging
-        //try bw.flush();
+        if (builtin.mode == .Debug) {
+            try bw.flush();
+        }
     }
 
     // Close any remaining objects or arrays
@@ -97,8 +101,7 @@ fn parsePath(line: []const u8) PathInfo {
     std.debug.assert(mem.eql(u8, line[0..4], "json"));
     var last_field: LastField = .root;
     var nest: u32 = 0;
-    var is_in_quoted_string = false;
-    var is_in_square_brackets = false;
+    var last_field_start: usize = 0;
     var path_end: usize = 0;
     var i: usize = 4;
     while (i < line.len) {
@@ -108,52 +111,32 @@ fn parsePath(line: []const u8) PathInfo {
                 path_end = i;
                 break;
             },
-            '\\' => {
-                // we only care about escaped double quotes, which
-                // are important for nesting. For those, we want
-                // to skip counting them for nesting, so do an
-                // extra increment.
-                if (i < line.len - 1 and line[i + 1] == '\"') {
-                    i += 1;
-                }
-            },
-            '\"' => {
-                is_in_quoted_string = !is_in_quoted_string;
-                if (is_in_quoted_string and is_in_square_brackets) {
-                    last_field = .object_in_brackets;
-                }
-            },
-            '.' => if (!is_in_quoted_string) {
+            '.' => {
                 last_field = .object;
+                last_field_start = i;
                 nest += 1;
             },
-            '[' => if (!is_in_quoted_string) {
-                is_in_square_brackets = true;
-                last_field = .array;
+            '[' => {
+                if (line[i + 1] == '"') {
+                    last_field = .object_in_brackets;
+                    last_field_start = i + 1;
+                    i = endOfBracketedField(line, i + 1);
+                } else {
+                    last_field = .array;
+                    last_field_start = i;
+                }
                 nest += 1;
-            },
-            ']' => if (!is_in_quoted_string) {
-                is_in_square_brackets = false;
             },
             else => {},
         }
         i += 1;
     }
-    const path = line[0..path_end];
-    // Re-parse the last field string now that we know what type it is.
     const last_field_str = switch (last_field) {
         .root => &.{},
         .array => &.{},
-        .object => blk: {
-            var it = mem.splitBackwardsSequence(u8, path, ".");
-            break :blk it.next().?;
-        },
-        .object_in_brackets => blk: {
-            var it = mem.splitBackwardsSequence(u8, path, "[");
-            const name_raw = it.next().?;
-            // remove ] on right
-            break :blk name_raw[0 .. name_raw.len - 1];
-        },
+        .object => line[last_field_start + 1 .. path_end],
+        // remove ]
+        .object_in_brackets => line[last_field_start .. path_end - 1],
     };
     return PathInfo{
         .nest = nest,
@@ -161,4 +144,19 @@ fn parsePath(line: []const u8) PathInfo {
         .last_field_str = last_field_str,
         .value = line[path_end + 3 .. line.len - 1], // removes leading `=` and semicolon
     };
+}
+
+// returns index of last bracket of field-in-bracket syntax
+fn endOfBracketedField(line: []const u8, start_idx: usize) usize {
+    var i: usize = start_idx;
+    while (i < line.len) {
+        switch (line[i]) {
+            '\\' => i += 1,
+            ']' => break,
+            else => {},
+        }
+        i += 1;
+    }
+    std.debug.assert(line[i] == ']');
+    return i;
 }
