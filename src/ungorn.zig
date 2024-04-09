@@ -11,8 +11,6 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
     var jws = std.json.writeStream(stdout, .{});
 
     // tracks nesting levels of array and object
-    // PathInfo happens to hold last_field_str, but may point to garbage
-    // as it's only used immediately after parsing.
     // Currently uses difference in nesting level between two paths to know
     // how far back to pop.
     var stack = try std.BoundedArray(LastField, 1024).init(0);
@@ -23,8 +21,8 @@ pub fn ungorn(rdr: anytype, wtr: anytype) !void {
     while (try input.readUntilDelimiterOrEof(&line_buf, '\n')) |line| {
         const path_info = parsePath(line);
         const val = path_info.value;
-        const val_is_obj = mem.eql(u8, val, "{}");
-        const val_is_arr = mem.eql(u8, val, "[]");
+        const val_is_obj = val[0] == '{';
+        const val_is_arr = val[0] == '[';
         const last_field = path_info.last_field;
 
         // Try to end objects and arrays
