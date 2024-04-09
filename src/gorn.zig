@@ -23,27 +23,8 @@ pub fn gorn(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
     var val_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     const val_alloc = val_arena.allocator();
 
-    // tracks statement stack (but not the associate names, to ensure that the
-    // fba frees the names properly). Deinit not required.
-    var stack_buf: [1024]u8 = undefined;
-    var stack_fba = std.heap.FixedBufferAllocator.init(&stack_buf);
-    const stack_alloc = stack_fba.allocator();
-    var stack = std.ArrayList(StackItem).init(stack_alloc);
-    try stack.append(.{ .root = .{ .line_idx = stream_info.line_idx } });
-
-    // Note that fba will only free if the item is at the end of the stack
-    // (like a bump allocator). That's why this is kept separate from the stack_fba,
-    // so I don't have to make sure that e.g. a resizing of the stack will make it
-    // impossible to free the stack names.
-    //
-    // Assumes that key names are generally not that big, and nesting is not that
-    // deep. Could probably increase buffer size even more without penalty.
-    //
-    // Should free a name after stack is popped. Because these names are pushed and
-    // popped stack-like, free should always succeed.
-    var stack_names_buf: [4096]u8 = undefined;
-    var stack_names_fba = std.heap.FixedBufferAllocator.init(&stack_names_buf);
-    const stack_names_alloc = stack_names_fba.allocator();
+    // track the path to be written before the value
+    var path = try Path.init(stream_info.line_idx);
 
     var bw = std.io.bufferedWriter(wtr);
     const stdout = bw.writer();
@@ -55,7 +36,7 @@ pub fn gorn(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
 
         // write stack
         if (shouldWriteLine(token)) {
-            try writeStack(stack.items, &stdout);
+            _ = try path.write(&stdout);
         }
 
         // write value
@@ -67,15 +48,15 @@ pub fn gorn(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
             .number, .allocated_number => |n| try stdout.print(" = {s};\n", .{n}),
             // Could be just a string, or a kv
             .string, .allocated_string => |s| {
-                switch (stack.getLast()) {
-                    .object_begin => {
+                switch (path.getLastTag()) {
+                    .object => {
                         // it's a kv
 
                         // since the scanner buffer may be evicted during the nextAlloc call
                         // to make way for new data, we need to alloc the key before the
                         // json nextAlloc call. Even though we can also write the key first
                         // for certain lines, if the key = {} or [], we'll need to save the key
-                        // to the stack. But we won't know until nextAlloc is called.
+                        // to the path. But we won't know until nextAlloc is called.
                         const key = try val_alloc.dupe(u8, s);
 
                         // We can assume that since we received an .object_begin,
@@ -106,13 +87,11 @@ pub fn gorn(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
                             },
                             .object_begin => {
                                 try stdout.print(" = {{}};\n", .{});
-                                const name = try stack_names_alloc.dupe(u8, key);
-                                try stack.append(.{ .object_begin = .{ .name = name, .bracket = shouldBracketField(key, &gcd) } });
+                                try path.pushTagName(.object, key, shouldBracketField(key, &gcd));
                             },
                             .array_begin => {
                                 try stdout.print(" = [];\n", .{});
-                                const name = try stack_names_alloc.dupe(u8, key);
-                                try stack.append(.{ .array_begin = .{ .name = name, .bracket = shouldBracketField(key, &gcd) } });
+                                try path.pushTagName(.array, key, shouldBracketField(key, &gcd));
                             },
                             .object_end, .array_end => {
                                 return error.malformedJson;
@@ -130,101 +109,147 @@ pub fn gorn(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
             },
             .object_begin => {
                 try stdout.print(" = {{}};\n", .{});
-                try stack.append(.{ .object_begin = .{} });
+                try path.pushTag(.object);
             },
             .array_begin => {
                 try stdout.print(" = [];\n", .{});
-                try stack.append(.{ .array_begin = .{} });
+                try path.pushTag(.array);
             },
-            .object_end => {
-                // unwind stack to previous bracket + one
-                const last = stack.pop();
-                switch (last) {
-                    .object_begin => |o| if (o.name) |name| {
-                        stack_names_alloc.free(name);
-                    },
-                    else => unreachable,
-                }
-            },
-            .array_end => {
-                // unwind stack to previous bracket
-                const last = stack.pop();
-                switch (last) {
-                    .array_begin => |a| if (a.name) |name| {
-                        stack_names_alloc.free(name);
-                    },
-                    else => unreachable,
-                }
+            .object_end, .array_end => {
+                _ = path.pop();
             },
             else => return error.PartialValue,
         }
         // flushing more often helps with debugging
-        //try bw.flush();
+        try bw.flush();
         // Assumes that if we need to have space for large values once, we'll need it again
         _ = val_arena.reset(.retain_capacity);
 
         // increase index if stack inside array
-        switch (stack.items[stack.items.len - 1]) {
-            .array_begin => |*a| {
-                if (a.curr_idx) |*curr_idx| {
-                    curr_idx.* += 1;
-                } else {
-                    a.curr_idx = 0;
-                }
-            },
-            else => {},
-        }
+        try path.incrementIfInArray();
     }
     try bw.flush();
 }
 
-fn writeStack(stack: []StackItem, wtr: anytype) !void {
-    for (stack) |item| {
-        switch (item) {
-            .root => |r| if (r.line_idx) |idx| {
-                try wtr.print("json[{d}]", .{idx});
-            } else {
-                try wtr.print("json", .{});
-            },
-            .object_begin => |o| if (o.name) |n| {
-                if (o.bracket) {
-                    // may contain escaped characters
-                    _ = try wtr.write("[");
-                    try json.encodeJsonString(n, .{}, wtr);
-                    _ = try wtr.write("]");
-                } else {
-                    try wtr.print(".{s}", .{n});
-                }
-            },
-            .array_begin => |a| if (a.name) |n| {
-                if (a.bracket) {
-                    // may contain escaped characters
-                    _ = try wtr.write("[");
-                    try json.encodeJsonString(n, .{}, wtr);
-                    try wtr.print("][{d}]", .{a.curr_idx.?});
-                } else {
-                    try wtr.print(".{s}[{d}]", .{ n, a.curr_idx.? });
-                }
-            } else {
-                try wtr.print("[{d}]", .{a.curr_idx.?});
-            },
+// Assumes that key names are generally not that big, and nesting is not that
+// deep. Could probably increase buffer size even more without penalty.
+const Path = struct {
+    // tracks the nodes of the path in a stack
+    buf: [1024]u8,
+    fba: std.heap.FixedBufferAllocator,
+    alloc: std.mem.Allocator,
+    stack: std.ArrayList(Node),
+
+    // Stores the line to write
+    line_buf: [4096]u8,
+    line_end: usize,
+
+    fn init(stream_idx: ?usize) !Path {
+        var buf: [1024]u8 = undefined;
+        var fba = std.heap.FixedBufferAllocator.init(&buf);
+        const alloc = fba.allocator();
+        const stack = std.ArrayList(Node).init(alloc);
+        var line_buf: [4096]u8 = undefined;
+        const line = if (stream_idx) |i|
+            try fmt.bufPrint(&line_buf, "json[{d}]", .{i})
+        else
+            try fmt.bufPrint(&line_buf, "json", .{});
+        return Path{
+            .buf = buf,
+            .fba = fba,
+            .alloc = alloc,
+            .stack = stack,
+            .line_buf = line_buf,
+            .line_end = line.len,
+        };
+    }
+
+    fn write(self: Path, wtr: anytype) !usize {
+        return try wtr.write(self.line_buf[0..self.line_end]);
+    }
+
+    fn pushTag(self: *Path, tag: NodeTag) !void {
+        const write_idx = self.line_end;
+        const target = self.line_buf[write_idx..];
+        const written = switch (tag) {
+            .object => &.{},
+            .array => try fmt.bufPrint(target, "[0]", .{}),
+        };
+        self.line_end = write_idx + written.len;
+        // TODO streamline this?
+        switch (tag) {
+            .object => try self.stack.append(.{ .object = .{ .line_idx = write_idx } }),
+            .array => try self.stack.append(.{ .array = .{ .line_idx = write_idx } }),
         }
     }
-}
 
-const StackItem = union(enum) {
-    root: struct {
-        line_idx: ?usize = null,
-    },
-    object_begin: struct {
-        name: ?[]const u8 = null,
-        bracket: bool = false,
-    },
-    array_begin: struct {
-        name: ?[]const u8 = null,
-        bracket: bool = false,
-        curr_idx: ?u64 = null,
-    },
+    fn pushTagName(self: *Path, tag: NodeTag, name: []const u8, is_bracketed: bool) !void {
+        const write_idx = self.line_end;
+        const target = self.line_buf[write_idx..];
+        const written = if (is_bracketed) switch (tag) {
+            .object => blk: {
+                var fbs = std.io.fixedBufferStream(target);
+                var wtr = fbs.writer();
+                _ = try wtr.write("[");
+                try json.encodeJsonString(name, .{}, wtr);
+                _ = try wtr.write("]");
+                break :blk fbs.getWritten();
+            },
+            .array => blk: {
+                var fbs = std.io.fixedBufferStream(target);
+                var wtr = fbs.writer();
+                _ = try wtr.write("[");
+                try json.encodeJsonString(name, .{}, wtr);
+                try wtr.print("][0]", .{});
+                break :blk fbs.getWritten();
+            },
+        } else switch (tag) {
+            .object => try fmt.bufPrint(target, ".{s}", .{name}),
+            .array => try fmt.bufPrint(target, ".{s}[0]", .{name}),
+        };
+        self.line_end = write_idx + written.len;
+        switch (tag) {
+            .object => try self.stack.append(.{ .object = .{ .line_idx = write_idx } }),
+            .array => try self.stack.append(.{ .array = .{ .line_idx = write_idx } }),
+        }
+    }
+
+    fn pop(self: *Path) void {
+        const node = self.stack.pop();
+        switch (node) {
+            inline else => |n| self.line_end = n.line_idx,
+        }
+    }
+
+    fn getLastTag(self: Path) NodeTag {
+        return self.stack.getLast();
+    }
+
+    fn incrementIfInArray(self: *Path) !void {
+        const nodes = self.stack.items;
+        if (nodes.len > 0) switch (nodes[nodes.len - 1]) {
+            .array => |*a| {
+                a.curr_idx += 1;
+                // rewrite line for the new idx
+                const write_idx = std.mem.lastIndexOf(u8, self.line_buf[0..self.line_end], "[").?;
+                const written = try fmt.bufPrint(self.line_buf[write_idx..], "[{d}]", .{a.curr_idx});
+                self.line_end = write_idx + written.len;
+            },
+            else => {},
+        };
+    }
+
+    const NodeTag = enum {
+        object,
+        array,
+    };
+
+    const Node = union(NodeTag) { object: struct {
+        line_idx: usize,
+    }, array: struct {
+        line_idx: usize,
+        curr_idx: usize = 0,
+    } };
 };
 
 // Should write line on most tokens, but not on e.g. array end and object end
