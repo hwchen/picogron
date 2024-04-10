@@ -15,19 +15,29 @@ pub fn main() !void {
     var opts = Opts{};
     _ = args.next(); // skip args[0]
     while (args.next()) |arg| {
-        if (mem.eql(u8, arg, "--ungron") or mem.eql(u8, arg, "-u")) {
+        if (mem.eql(u8, arg, "--help") or mem.eql(u8, arg, "-h")) {
+            std.debug.print("{s}\n", .{HELP});
+            return std.process.exit(0);
+        } else if (mem.eql(u8, arg, "--ungron") or mem.eql(u8, arg, "-u")) {
             opts.ungron = true;
         } else if (mem.eql(u8, arg, "--stream") or mem.eql(u8, arg, "-s")) {
             opts.stream = true;
         } else {
-            if (opts.filepath == null) {
+            if (mem.eql(u8, arg[0..1], "-")) {
+                std.debug.print("Arg '{s}' not supported\n", .{arg});
+                return std.process.exit(1);
+            } else if (opts.filepath == null) {
+                // add a filepath if there isn't already a filepath specified in args
                 opts.filepath = arg;
-            } else if (mem.eql(u8, arg[0..1], "-")) {
-                return error.UnsupportedCliArg;
             } else {
-                return error.TooManyCliArg;
+                std.debug.print("Multiple positional args not supported, supply only one filename\n", .{});
+                return std.process.exit(1);
             }
         }
+    }
+    if (opts.ungron and opts.stream) {
+        std.debug.print("--ungron and --stream flags are incompatible\n", .{});
+        return std.process.exit(1);
     }
 
     const input = if (opts.filepath) |path| blk: {
@@ -50,3 +60,18 @@ const Opts = struct {
     stream: bool = false,
     filepath: ?[]const u8 = null,
 };
+
+const HELP =
+    \\Transform JSON (from a file or stdin) into discrete assignments to make it greppable
+    \\
+    \\Usage:
+    \\  picogron [OPTIONS] [FILE]
+    \\
+    \\positional arguments:
+    \\  FILE           file name (stdin if no filename provided)
+    \\
+    \\options:
+    \\  -h, --help     show this help message and exit
+    \\  -s, --stream   enable stream mode for json input (line delimited)
+    \\  -u, --ungron   ungron: convert gron output back to JSON
+;
