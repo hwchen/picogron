@@ -121,7 +121,7 @@ pub fn gorn(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
             else => return error.PartialValue,
         }
         // flushing more often helps with debugging
-        try bw.flush();
+        //try bw.flush();
         // Assumes that if we need to have space for large values once, we'll need it again
         _ = val_arena.reset(.retain_capacity);
 
