@@ -23,3 +23,7 @@ The main reason for picogron's existence is to have preserved order for json key
 - values only
 - json stream output format
 - preserving array indices by inserting null during ungron
+
+## Development
+
+You'll need zig nightly 2024-04-07 or later to compile picogron. You can [download](https://ziglang.org/download/), or use the nix flake in this repo with `nix develop` (or `direnv allow` if you use `nix-direnv`).
