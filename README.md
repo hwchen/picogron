@@ -1,8 +1,10 @@
+## Picogron
+
+small code, small memory footprint, small runtime.
+
 Port of [gron](https://github.com/tomnomnom/gron)
 
-The main reason for gron's existence is to have preserved order for json keys, where gron's keys are either sorted or random.
-
-Features implemented on an as-needed basis, but this will probably stay minimal.
+The main reason for picogron's existence is to have preserved order for json keys, where gron's keys are either sorted or random.
 
 `testdata` is copied from gron at `13561bd`
 

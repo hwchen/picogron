@@ -137,7 +137,7 @@ pub fn gron(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
                 try stack.append(.{ .array_begin = .{} });
             },
             .object_end => {
-                // unwind stack to previous bracket + one
+                // unwind stack to previous bracket
                 const last = stack.pop();
                 switch (last) {
                     .object_begin => |o| if (o.name) |name| {

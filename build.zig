@@ -18,7 +18,7 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const exe = b.addExecutable(.{
-        .name = "gron",
+        .name = "picogron",
         .root_source_file = .{ .path = "src/main.zig" },
         .target = target,
         .optimize = optimize,
