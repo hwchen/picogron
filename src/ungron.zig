@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 const mem = std.mem;
 const math = std.math;
 
-pub fn ungorn(rdr: anytype, wtr: anytype) !void {
+pub fn ungron(rdr: anytype, wtr: anytype) !void {
     var br = std.io.bufferedReaderSize(4096 * 8, rdr);
     const input = br.reader();
     var bw = std.io.bufferedWriter(wtr);

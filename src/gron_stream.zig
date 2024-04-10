@@ -1,8 +1,8 @@
 const std = @import("std");
 const math = std.math;
-const gorn = @import("gorn.zig");
+const gron = @import("gron.zig");
 
-pub fn gornStream(rdr: anytype, wtr: anytype) !void {
+pub fn gronStream(rdr: anytype, wtr: anytype) !void {
     var br = std.io.bufferedReader(rdr);
     const input = br.reader();
     var line_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -13,7 +13,7 @@ pub fn gornStream(rdr: anytype, wtr: anytype) !void {
     var line_idx: usize = 0;
     while (try input.readUntilDelimiterOrEofAlloc(line_alloc, '\n', math.maxInt(u32))) |line| {
         var line_stream = std.io.fixedBufferStream(line);
-        try gorn.gorn(line_stream.reader(), wtr, .{ .line_idx = line_idx });
+        try gron.gron(line_stream.reader(), wtr, .{ .line_idx = line_idx });
         line_idx += 1;
     }
 }

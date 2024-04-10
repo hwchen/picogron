@@ -1,13 +1,13 @@
 Port of [gron](https://github.com/tomnomnom/gron)
 
-The main reason for gorn's existence is to have preserved order for json keys, where gron's keys are either sorted or random.
+The main reason for gron's existence is to have preserved order for json keys, where gron's keys are either sorted or random.
 
 Features implemented on an as-needed basis, but this will probably stay minimal.
 
 `testdata` is copied from gron at `13561bd`
 
 ## Features
-- gorn and ungorn
+- gron and ungron
 - preserved order for json keys
 - json stream (line-delimited) input
 - minimal parsing. A tree of json values is not produced, instead tokens are handled as they are parsed.
@@ -20,4 +20,4 @@ Features implemented on an as-needed basis, but this will probably stay minimal.
 - read directly from url
 - values only
 - json stream output format
-- preserving array indices by inserting null during ungorn
+- preserving array indices by inserting null during ungron

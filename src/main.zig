@@ -2,9 +2,9 @@ const std = @import("std");
 const mem = std.mem;
 const fs = std.fs;
 const io = std.io;
-const gorn = @import("gorn.zig");
-const gorn_stream = @import("gorn_stream.zig");
-const ungorn = @import("ungorn.zig");
+const gron = @import("gron.zig");
+const gron_stream = @import("gron_stream.zig");
+const ungron = @import("ungron.zig");
 
 pub fn main() !void {
     var arg_buf: [512]u8 = undefined;
@@ -15,8 +15,8 @@ pub fn main() !void {
     var opts = Opts{};
     _ = args.next(); // skip args[0]
     while (args.next()) |arg| {
-        if (mem.eql(u8, arg, "--ungorn") or mem.eql(u8, arg, "-u")) {
-            opts.ungorn = true;
+        if (mem.eql(u8, arg, "--ungron") or mem.eql(u8, arg, "-u")) {
+            opts.ungron = true;
         } else if (mem.eql(u8, arg, "--stream") or mem.eql(u8, arg, "-s")) {
             opts.stream = true;
         } else {
@@ -36,17 +36,17 @@ pub fn main() !void {
     } else io.getStdIn().reader();
 
     const stdout_file = std.io.getStdOut().writer();
-    if (opts.ungorn) {
-        try ungorn.ungorn(input, stdout_file);
+    if (opts.ungron) {
+        try ungron.ungron(input, stdout_file);
     } else if (opts.stream) {
-        try gorn_stream.gornStream(input, stdout_file);
+        try gron_stream.gronStream(input, stdout_file);
     } else {
-        try gorn.gorn(input, stdout_file, .{});
+        try gron.gron(input, stdout_file, .{});
     }
 }
 
 const Opts = struct {
-    ungorn: bool = false,
+    ungron: bool = false,
     stream: bool = false,
     filepath: ?[]const u8 = null,
 };

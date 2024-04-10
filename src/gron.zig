@@ -6,7 +6,7 @@ const fmt = std.fmt;
 const GenCatData = @import("GenCatData");
 const json_ident = @import("json_ident.zig");
 
-pub fn gorn(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
+pub fn gron(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
     // Used to hold data for unicode processing (checking if string is
     // javascript ident).
     var gcd_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);

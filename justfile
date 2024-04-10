@@ -1,15 +1,15 @@
 set shell := ["bash", "-uc"]
 
-gorn *args="":
+gron *args="":
     zig build run -- {{args}}
 
-gorn-release *args="":
+gron-release *args="":
     zig build run -Doptimize=ReleaseFast -- {{args}}
 
-ungorn *args="":
+ungron *args="":
     zig build run -- -u {{args}}
 
-ungorn-release *args="":
+ungron-release *args="":
     zig build run -Doptimize=ReleaseFast -- -u {{args}}
 
 
@@ -22,7 +22,7 @@ roundtrip file:
 
 bench file *args="":
     zig build -Doptimize=ReleaseFast && poop \
-    "./zig-out/bin/gorn {{args}} {{file}}" \
+    "./zig-out/bin/gron {{args}} {{file}}" \
 
 # if perf permission denied: https://github.com/andrewrk/poop/issues/17
 # Can `sudo sysctl kernel.perf_event_paranoid=3`
@@ -30,24 +30,24 @@ bench file *args="":
 # Pass -u to test ungron
 bench-cmp file *args="":
     zig build -Doptimize=ReleaseFast && poop \
-    "./zig-out/bin/gorn {{args}} {{file}}" \
+    "./zig-out/bin/gron {{args}} {{file}}" \
     "fastgron {{args}} {{file}}" \
     "gron {{args}} {{file}}"
 
 # hyperfine uses shell, so can redirect with pipes
 bench-cmp-roundtrip file:
     zig build -Doptimize=ReleaseFast && hyperfine \
-    "./zig-out/bin/gorn {{file}} | ./zig-out/bin/gorn -u > /dev/null" \
+    "./zig-out/bin/gron {{file}} | ./zig-out/bin/gron -u > /dev/null" \
     "fastgron {{file}} | fastgron -u > /dev/null" \
     "gron {{file}} | gron -u > /dev/null"
 
 # gron appears to sort differently than `sort`, double check this?
 diff-gron file *args="":
-    zig build && diff <(./zig-out/bin/gorn {{file}} {{args}} | sort) <(gron {{file}} {{args}} | sort)
+    zig build && diff <(./zig-out/bin/gron {{file}} {{args}} | sort) <(gron {{file}} {{args}} | sort)
 
 # arrays are formatted differently, so need to do compact for both
 diff-roundtrip file:
-    zig build && diff <(./zig-out/bin/gorn {{file}} | ./zig-out/bin/gorn -u) <(cat {{file}} | jq -c)
+    zig build && diff <(./zig-out/bin/gron {{file}} | ./zig-out/bin/gron -u) <(cat {{file}} | jq -c)
 
 test-roundtrip:
     \fd json testdata --exclude "*stream*" --exec just diff-roundtrip
@@ -67,8 +67,8 @@ test-vs-gron-stream:
 perf bin file *args="":
     perf record --call-graph dwarf {{bin}} {{file}} {{args}} > /dev/null
 
-perf-gorn file *args="":
-    zig build -Doptimize=ReleaseFast && just perf ./zig-out/bin/gorn {{args}} {{file}}
+perf-gron file *args="":
+    zig build -Doptimize=ReleaseFast && just perf ./zig-out/bin/gron {{args}} {{file}}
 
 # stackcollapse-perf.pl and flamegraph.pl symlinked into path from flamegraph repo
 flamegraph:
