@@ -13,8 +13,24 @@ The main reason for picogron's existence is to have preserved order for json key
 - preserved order for json keys
 - json stream (line-delimited) input
 - minimal parsing. A tree of json values is not produced, instead tokens are handled as they are parsed.
-- streaming parsing. Instead of reading an entire input at once, the parser pulls to a buffer incrementally.
+- streaming parsing. Instead of reading an entire input at once, the parser pulls data incrementally.
 - low memory overhead. A result of minimal and streaming parsing, as well as careful usage of allocators only where needed.
+
+## Usage
+```
+Transform JSON (from a file or stdin) into discrete assignments to make it greppable
+
+Usage:
+  picogron [OPTIONS] [FILE]
+
+positional arguments:
+  FILE           file name (stdin if no filename provided)
+
+options:
+  -h, --help     show this help message and exit
+  -s, --stream   enable stream mode for json input (line delimited)
+  -u, --ungron   ungron: convert gron output back to JSON
+```
 
 ## Features not planned
 - sort
