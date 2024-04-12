@@ -106,7 +106,6 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                 if (try input.readByte() == '"') {
                     last_field = .object;
                     try last_field_str.resize(0);
-                    try last_field_str.append('"');
                     while (true) {
                         const c_in_quotes = try input.readByte();
                         switch (c_in_quotes) {
