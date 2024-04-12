@@ -1,5 +1,3 @@
-// TODO test value strings for semicolo]
-
 const std = @import("std");
 const builtin = @import("builtin");
 const mem = std.mem;
