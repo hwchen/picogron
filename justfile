@@ -41,6 +41,16 @@ bench-cmp-roundtrip file:
     "fastgron {{file}} | fastgron -u > /dev/null" \
     "gron {{file}} | gron -u > /dev/null"
 
+hyperfine file *args="":
+    zig build -Doptimize=ReleaseFast && hyperfine \
+    "./zig-out/bin/picogron {{args}} {{file}}" \
+
+hyperfine-cmp file *args="":
+    zig build -Doptimize=ReleaseFast && hyperfine \
+    "./zig-out/bin/picogron {{args}} {{file}}" \
+    "fastgron {{args}} {{file}}" \
+    "gron {{args}} {{file}}"
+
 # gron appears to sort differently than `sort`, double check this?
 diff-gron file *args="":
     zig build && diff <(./zig-out/bin/picogron {{file}} {{args}} | sort) <(gron {{file}} {{args}} | sort)
