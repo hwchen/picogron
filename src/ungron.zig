@@ -12,7 +12,7 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
     // tracks nesting levels of array and object
     // Currently uses difference in nesting level between two paths to know
     // how far back to pop.
-    var stack = try std.BoundedArray(LastField, 1024).init(0);
+    var stack = try std.BoundedArray(StackItem, 1024).init(0);
     try stack.append(.root);
 
     var prev_path_nest: u32 = 0;
@@ -37,6 +37,18 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                 prev_path_nest = curr_path_nest;
                 curr_path_nest = 0;
 
+                // insert comma if needed
+                switch (stack.slice()[stack.len - 1]) {
+                    .root => {},
+                    inline else => |*is_first| {
+                        if (!is_first.*) {
+                            try stdout.writeByte(',');
+                        } else {
+                            is_first.* = false;
+                        }
+                    },
+                }
+
                 // flushing more often helps with debugging
                 if (builtin.mode == .Debug) {
                     try bw.flush();
@@ -60,11 +72,11 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                 switch (val_start) {
                     '{' => {
                         try stdout.writeByte('{');
-                        try stack.append(.object);
+                        try stack.append(.{ .object = true });
                     },
                     '[' => {
                         try stdout.writeByte('[');
-                        try stack.append(.array);
+                        try stack.append(.{ .array = true });
                     },
                     else => {
                         try stdout.writeByte(val_start);
@@ -72,8 +84,6 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                             const val_c = try input.readByte();
                             switch (val_c) {
                                 ';' => {
-                                    // TODO fix trailing commas
-                                    try stdout.writeByte(',');
                                     break;
                                 },
                                 else => try stdout.writeByte(val_c),
@@ -130,6 +140,12 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
     _ = try bw.write("\n");
     try bw.flush();
 }
+
+const StackItem = union(LastField) {
+    root,
+    array: bool, // whether we're iterating through the first item, to know whether to comma.
+    object: bool, // whether we're iterating through the first item, to know whether to comma
+};
 
 const LastField = enum {
     root,
