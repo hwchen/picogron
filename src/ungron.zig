@@ -151,7 +151,7 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                 }
                 parse_state = .value_start;
             },
-            // TODO could just be folded into .path_end?
+            // Slower if folded into .path_end, somehow
             .value_start => {
                 const c = try input.readByte();
                 std.log.debug(".value_start: {c}", .{c});
