@@ -111,14 +111,17 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
 
                 // Try to end objects and arrays
                 if (curr_path_nest < prev_path_nest) {
-                    for (0..prev_path_nest - curr_path_nest) |_| {
-                        const last_nest = stack.pop();
-                        switch (last_nest) {
+                    const diff = prev_path_nest - curr_path_nest;
+                    var i = stack.len;
+                    while (i > stack.len - diff) {
+                        i -= 1;
+                        switch (stack.slice()[i]) {
                             .array, .array_first => try stdout.writeByte(']'),
                             .object, .object_first => try stdout.writeByte('}'),
                             .root => unreachable,
                         }
                     }
+                    try stack.resize(stack.len - diff);
                 }
                 prev_path_nest = curr_path_nest;
                 curr_path_nest = 0;
