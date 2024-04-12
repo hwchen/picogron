@@ -229,7 +229,7 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                 }
                 _ = try bw.write("\n");
                 try bw.flush();
-                break;
+                return;
             },
         }
     }
