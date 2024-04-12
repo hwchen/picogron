@@ -114,8 +114,8 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                     for (0..prev_path_nest - curr_path_nest) |_| {
                         const last_nest = stack.pop();
                         switch (last_nest) {
-                            .array => try stdout.writeByte(']'),
-                            .object => try stdout.writeByte('}'),
+                            .array, .array_first => try stdout.writeByte(']'),
+                            .object, .object_first => try stdout.writeByte('}'),
                             .root => unreachable,
                         }
                     }
@@ -126,13 +126,9 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                 // insert comma if needed
                 switch (stack.slice()[stack.len - 1]) {
                     .root => {},
-                    inline else => |*is_first| {
-                        if (!is_first.*) {
-                            try stdout.writeByte(',');
-                        } else {
-                            is_first.* = false;
-                        }
-                    },
+                    .array_first => stack.slice()[stack.len - 1] = .array,
+                    .object_first => stack.slice()[stack.len - 1] = .object,
+                    else => try stdout.writeByte(','),
                 }
 
                 // flushing more often helps with debugging
@@ -160,13 +156,13 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                     '{' => {
                         assert(mem.eql(u8, &(try input.readBytesNoEof(2)), "};"));
                         try stdout.writeByte('{');
-                        try stack.append(.{ .object = true });
+                        try stack.append(.object_first);
                         parse_state = .endline;
                     },
                     '[' => {
                         assert(mem.eql(u8, &(try input.readBytesNoEof(2)), "];"));
                         try stdout.writeByte('[');
-                        try stack.append(.{ .array = true });
+                        try stack.append(.array_first);
                         parse_state = .endline;
                     },
                     '"' => {
@@ -222,8 +218,8 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                 // Close any remaining objects or arrays
                 while (stack.popOrNull()) |item| {
                     switch (item) {
-                        .array => try stdout.writeByte(']'),
-                        .object => try stdout.writeByte('}'),
+                        .array, .array_first => try stdout.writeByte(']'),
+                        .object, .object_first => try stdout.writeByte('}'),
                         .root => {},
                     }
                 }
@@ -235,10 +231,13 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
     }
 }
 
-const StackItem = union(LastField) {
+// *_first means that it's the first iteration through the array/object
+const StackItem = union(enum) {
     root,
-    array: bool, // whether we're iterating through the first item, to know whether to comma.
-    object: bool, // whether we're iterating through the first item, to know whether to comma
+    array_first,
+    array,
+    object,
+    object_first,
 };
 
 const LastField = enum {
