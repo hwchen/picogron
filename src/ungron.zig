@@ -106,12 +106,30 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
             .path_end => {
                 std.log.debug(".path_end: curr nest {d}, prev nest {d}", .{ curr_path_nest, prev_path_nest });
                 assert(mem.eql(u8, &(try input.readBytesNoEof(2)), "= "));
+                const c = try input.readByte();
+                std.log.debug(".path_end::value start {c}", .{c});
+                std.log.debug(".path_end::stack_end {any}", .{stack.slice()[stack.len - 1]});
+                const val_is_new_objarr = c == '{' or c == '[';
+                // Need to pop one more if prev line was empty objarr, and this one also is.
+                const new_objarr_follows_empty_objarr = switch (stack.slice()[stack.len - 1]) {
+                    .array_first, .object_first => val_is_new_objarr,
+                    else => false,
+                };
 
                 // Try to end objects and arrays
-                if (curr_path_nest < prev_path_nest) {
-                    const diff = prev_path_nest - curr_path_nest;
+                if (curr_path_nest == prev_path_nest and new_objarr_follows_empty_objarr) {
+                    switch (stack.pop()) {
+                        .array, .array_first => try stdout.writeByte(']'),
+                        .object, .object_first => try stdout.writeByte('}'),
+                        .root => unreachable,
+                    }
+                } else if (curr_path_nest < prev_path_nest) {
                     var i = stack.len;
+                    var diff = prev_path_nest - curr_path_nest;
+                    diff += @as(u32, @intFromBool(new_objarr_follows_empty_objarr));
+                    std.log.debug(".path_end::updated_diff {d}", .{diff});
                     while (i > stack.len - diff) {
+                        std.log.debug(".path_end::pop_stack", .{});
                         i -= 1;
                         switch (stack.slice()[i]) {
                             .array, .array_first => try stdout.writeByte(']'),
@@ -147,12 +165,6 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                     },
                     else => {},
                 }
-                parse_state = .value_start;
-            },
-            // Slower if folded into .path_end, somehow
-            .value_start => {
-                const c = try input.readByte();
-                std.log.debug(".value_start: {c}", .{c});
                 switch (c) {
                     '{' => {
                         assert(mem.eql(u8, &(try input.readBytesNoEof(2)), "};"));
@@ -255,7 +267,6 @@ const ParseState = enum {
     bracketed_name,
     array_idx,
     path_end,
-    value_start,
     value_string,
     value_non_string,
     endline,
