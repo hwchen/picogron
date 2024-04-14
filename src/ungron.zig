@@ -118,6 +118,11 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
 
                 // Try to end objects and arrays
                 if (curr_path_nest == prev_path_nest and new_objarr_follows_empty_objarr) {
+                    // There's a significant perf slowdown if this `if` is merged into the
+                    // following `else if` as (curr_path_nest <= prev_path_nest) because all
+                    // diffs == 0 have to be checked, where this allows many fewer diffs to
+                    // be checked. And adding an additional `if` to this block doesn't appear
+                    // to impact perf.
                     switch (stack.pop()) {
                         .array, .array_first => try stdout.writeByte(']'),
                         .object, .object_first => try stdout.writeByte('}'),
