@@ -250,7 +250,7 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
 }
 
 // *_first means that it's the first iteration through the array/object
-const StackItem = union(enum) {
+const StackItem = enum {
     root,
     array_first,
     array,
