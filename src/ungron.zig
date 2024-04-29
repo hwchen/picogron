@@ -13,7 +13,11 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
     // tracks nesting levels of array and object
     // Currently uses difference in nesting level between two paths to know
     // how far back to pop.
-    var stack = try std.BoundedArray(StackItem, 1024).init(0);
+    // Looks like using FixedBufferAllocator + ArrayList is perf-wise same as BoundedArray
+    var stack_buf: [1024]u8 = undefined;
+    var stack_fba = std.heap.FixedBufferAllocator.init(&stack_buf);
+    const stack_alloc = stack_fba.allocator();
+    var stack = std.ArrayList(StackItem).init(stack_alloc);
     try stack.append(.root);
 
     var parse_state: ParseState = .startline;
@@ -108,10 +112,10 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                 assert(mem.eql(u8, &(try input.readBytesNoEof(2)), "= "));
                 const c = try input.readByte();
                 std.log.debug(".path_end::value start {c}", .{c});
-                std.log.debug(".path_end::stack_end {any}", .{stack.slice()[stack.len - 1]});
+                std.log.debug(".path_end::stack_end {any}", .{stack.items[stack.items.len - 1]});
                 const val_is_new_objarr = c == '{' or c == '[';
                 // Need to pop one more if prev line was empty objarr, and this one also is.
-                const new_objarr_follows_empty_objarr = switch (stack.slice()[stack.len - 1]) {
+                const new_objarr_follows_empty_objarr = switch (stack.items[stack.items.len - 1]) {
                     .array_first, .object_first => val_is_new_objarr,
                     else => false,
                 };
@@ -129,29 +133,29 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                         .root => unreachable,
                     }
                 } else if (curr_path_nest < prev_path_nest) {
-                    var i = stack.len;
+                    var i = stack.items.len;
                     var diff = prev_path_nest - curr_path_nest;
                     diff += @as(u32, @intFromBool(new_objarr_follows_empty_objarr));
                     std.log.debug(".path_end::updated_diff {d}", .{diff});
-                    while (i > stack.len - diff) {
+                    while (i > stack.items.len - diff) {
                         std.log.debug(".path_end::pop_stack", .{});
                         i -= 1;
-                        switch (stack.slice()[i]) {
+                        switch (stack.items[i]) {
                             .array, .array_first => try stdout.writeByte(']'),
                             .object, .object_first => try stdout.writeByte('}'),
                             .root => unreachable,
                         }
                     }
-                    try stack.resize(stack.len - diff);
+                    try stack.resize(stack.items.len - diff);
                 }
                 prev_path_nest = curr_path_nest;
                 curr_path_nest = 0;
 
                 // insert comma if needed
-                switch (stack.slice()[stack.len - 1]) {
+                switch (stack.items[stack.items.len - 1]) {
                     .root => {},
-                    .array_first => stack.slice()[stack.len - 1] = .array,
-                    .object_first => stack.slice()[stack.len - 1] = .object,
+                    .array_first => stack.items[stack.items.len - 1] = .array,
+                    .object_first => stack.items[stack.items.len - 1] = .object,
                     else => try stdout.writeByte(','),
                 }
 
