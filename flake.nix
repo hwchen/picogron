@@ -82,7 +82,7 @@
           pkgs.poop
 
           # for script to generate json
-          pkgs.nodejs-slim_21
+          pkgs.nodejs-slim_22
         ];
       };
     });
