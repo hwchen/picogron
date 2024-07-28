@@ -28,7 +28,7 @@
           (zig-overlay.overlays.default)
         ];
       };
-      nativeBuildInputs = [pkgs.zigpkgs.master-2024-04-07];
+      nativeBuildInputs = [pkgs.zigpkgs.master-2024-07-26];
       picogron = pkgs.stdenv.mkDerivation {
         pname = "picogron";
         version = "v0.1.0";
