@@ -72,9 +72,9 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                 }
             },
             .bracketed_name => {
-                const c = try input.readByte();
-                std.log.debug(".bracketed_name: {c}", .{c});
-                switch (c) {
+                const c_1 = try input.readByte();
+                std.log.debug(".bracketed_name: {c}", .{c_1});
+                switch (c_1) {
                     '\\' => {
                         // this will skip over escaped double quotes
                         // in the switch expr.
@@ -82,7 +82,8 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                         try last_field_str.append(try input.readByte());
                     },
                     '"' => {
-                        assert(try input.readByte() == ']');
+                        const c_2 = try input.readByte();
+                        assert(c_2 == ']');
                         switch (try input.readByte()) {
                             '.' => parse_state = .dot,
                             '[' => parse_state = .bracket,
@@ -90,7 +91,7 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                             else => unreachable,
                         }
                     },
-                    else => try last_field_str.append(c),
+                    else => try last_field_str.append(c_1),
                 }
             },
             .array_idx => {
@@ -105,7 +106,8 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
             },
             .path_end => {
                 std.log.debug(".path_end: curr nest {d}, prev nest {d}", .{ curr_path_nest, prev_path_nest });
-                assert(mem.eql(u8, &(try input.readBytesNoEof(2)), "= "));
+                const cs_1 = try input.readBytesNoEof(2);
+                assert(mem.eql(u8, &cs_1, "= "));
                 const c = try input.readByte();
                 std.log.debug(".path_end::value start {c}", .{c});
                 std.log.debug(".path_end::stack_end {any}", .{stack.slice()[stack.len - 1]});
@@ -174,13 +176,15 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                 }
                 switch (c) {
                     '{' => {
-                        assert(mem.eql(u8, &(try input.readBytesNoEof(2)), "};"));
+                        const cs_2 = try input.readBytesNoEof(2);
+                        assert(mem.eql(u8, &cs_2, "};"));
                         try stdout.writeByte('{');
                         try stack.append(.object_first);
                         parse_state = .endline;
                     },
                     '[' => {
-                        assert(mem.eql(u8, &(try input.readBytesNoEof(2)), "];"));
+                        const cs_2 = try input.readBytesNoEof(2);
+                        assert(mem.eql(u8, &cs_2, "];"));
                         try stdout.writeByte('[');
                         try stack.append(.array_first);
                         parse_state = .endline;
@@ -207,7 +211,8 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                     },
                     '"' => {
                         try stdout.writeByte('"');
-                        assert(try input.readByte() == ';');
+                        const c_2 = try input.readByte();
+                        assert(c_2 == ';');
                         parse_state = .endline;
                     },
                     else => try stdout.writeByte(c),
