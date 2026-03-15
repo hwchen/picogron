@@ -40,6 +40,8 @@ options:
 - json stream output format
 - preserving array indices by inserting null during ungron
 
+Note: semicolons are always output, and ungron expects semicolons in the input. TODO better error messages for this.
+
 ## Development
 
 You'll need zig nightly 2024-04-07 or later to compile picogron. You can [download](https://ziglang.org/download/), or use the nix flake in this repo with `nix develop` (or `direnv allow` if you use `nix-direnv`).
