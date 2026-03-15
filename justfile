@@ -21,7 +21,7 @@ roundtrip file:
 # citylots.json is downloaded from https://github.com/zemirco/sf-city-lots-json/blob/master/citylots.json
 
 bench file *args="":
-    zig build -Doptimize=ReleaseFast && poop \
+    zig-14 build -Doptimize=ReleaseFast && poop \
     "./zig-out/bin/picogron {{args}} {{file}}" \
 
 # if perf permission denied: https://github.com/andrewrk/poop/issues/17

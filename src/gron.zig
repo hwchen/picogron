@@ -138,7 +138,8 @@ pub fn gron(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
             },
             .object_end => {
                 // unwind stack to previous bracket
-                const last = stack.pop();
+                // TODO unwrap on null ok?
+                const last = stack.pop().?;
                 switch (last) {
                     .object_begin => |o| if (o.name) |name| {
                         stack_names_alloc.free(name);
@@ -148,7 +149,8 @@ pub fn gron(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
             },
             .array_end => {
                 // unwind stack to previous bracket
-                const last = stack.pop();
+                // TODO unwrap on null ok?
+                const last = stack.pop().?;
                 switch (last) {
                     .array_begin => |a| if (a.name) |name| {
                         stack_names_alloc.free(name);

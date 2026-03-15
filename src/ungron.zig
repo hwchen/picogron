@@ -123,7 +123,9 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                     // diffs == 0 have to be checked, where this allows many fewer diffs to
                     // be checked. And adding an additional `if` to this block doesn't appear
                     // to impact perf.
-                    switch (stack.pop()) {
+                    //
+                    // TODO unwrap on null, is that ok?
+                    switch (stack.pop().?) {
                         .array, .array_first => try stdout.writeByte(']'),
                         .object, .object_first => try stdout.writeByte('}'),
                         .root => unreachable,
@@ -234,7 +236,7 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
             .end => {
                 std.log.debug(".end", .{});
                 // Close any remaining objects or arrays
-                while (stack.popOrNull()) |item| {
+                while (stack.pop()) |item| {
                     switch (item) {
                         .array, .array_first => try stdout.writeByte(']'),
                         .object, .object_first => try stdout.writeByte('}'),
