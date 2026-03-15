@@ -34,7 +34,7 @@
     .dependencies = .{
         .zg = .{
             .url = "https://codeberg.org/atman/zg/archive/v0.13.5.tar.gz",
-            .hash = "1220d5dcf72782220fa29dac0221e3ef8d2c2b7e95b1799850c02926b954f8cfd6ed",
+            .hash = "zg-0.13.5-oGqU3I6Z7QLV3PcngiIPop2sAiHj740sK36VsXmYUMAp",
         },
         // See `zig fetch --save <url>` for a command-line interface for adding dependencies.
         //.example = .{
