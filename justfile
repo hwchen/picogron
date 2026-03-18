@@ -57,7 +57,7 @@ diff-gron file *args="":
 
 # arrays are formatted differently, so need to do compact for both
 diff-roundtrip file:
-    zig build && diff <(./zig-out/bin/picogron {{file}} | ./zig-out/bin/picogron -u) <(cat {{file}} | jq -c)
+    diff <(./zig-out/bin/picogron {{file}} | ./zig-out/bin/picogron -u) <(cat {{file}} | jq -c)
 
 test: test-roundtrip test-vs-gron test-vs-gron-stream
 

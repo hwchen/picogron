@@ -4,6 +4,10 @@ const mem = std.mem;
 const math = std.math;
 const assert = std.debug.assert;
 
+// Nested arrays and objects are derived from entirely from path, not from
+// declarations of array/obj. This is because when grepping, it's easy to
+// remove those declarations when e.g. searching for name.
+
 pub fn ungron(rdr: anytype, wtr: anytype) !void {
     var br = std.io.bufferedReaderSize(4096 * 8, rdr);
     const input = br.reader();
@@ -118,15 +122,14 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
             const c = try input.readByte();
             std.log.debug(".path_end::value start {c}", .{c});
             std.log.debug(".path_end::stack_end {any}", .{stack.slice()[stack.len - 1]});
-            const val_is_new_objarr = c == '{' or c == '[';
-            // Need to pop one more if prev line was empty objarr, and this one also is.
-            const new_objarr_follows_empty_objarr = switch (stack.slice()[stack.len - 1]) {
-                .array_first, .object_first => val_is_new_objarr,
+            // Need to pop one more if prev line was empty objarr.
+            const follows_empty_objarr = switch (stack.slice()[stack.len - 1]) {
+                .array_first, .object_first => true,
                 else => false,
             };
 
             // Try to end objects and arrays
-            if (curr_path_nest == prev_path_nest and new_objarr_follows_empty_objarr) {
+            if (curr_path_nest == prev_path_nest and follows_empty_objarr) {
                 // There's a significant perf slowdown if this `if` is merged into the
                 // following `else if` as (curr_path_nest <= prev_path_nest) because all
                 // diffs == 0 have to be checked, where this allows many fewer diffs to
@@ -142,7 +145,7 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
             } else if (curr_path_nest < prev_path_nest) {
                 var i = stack.len;
                 var diff = prev_path_nest - curr_path_nest;
-                diff += @as(u32, @intFromBool(new_objarr_follows_empty_objarr));
+                diff += @as(u32, @intFromBool(follows_empty_objarr));
                 std.log.debug(".path_end::updated_diff {d}", .{diff});
                 while (i > stack.len - diff) {
                     std.log.debug(".path_end::pop_stack", .{});
@@ -245,6 +248,10 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
         .endline => {
             const c = try input.readByte();
             std.log.debug(".endline: {c}", .{c});
+
+            std.log.debug(".endline: curr nest {d}, prev nest {d}", .{ curr_path_nest, prev_path_nest });
+            std.log.debug(".endline: stack {any}", .{stack.slice()});
+
             assert(c == '\n');
             // flushing more often helps with debugging
             if (builtin.mode == .Debug) {
@@ -255,6 +262,7 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
         .end => {
             std.log.debug(".end", .{});
             // Close any remaining objects or arrays
+            std.log.debug(".end: stack {any}", .{stack.slice()});
             while (stack.pop()) |item| {
                 switch (item) {
                     .array, .array_first => try stdout.writeByte(']'),
