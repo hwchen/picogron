@@ -65,7 +65,10 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                 '.' => continue :state .dot,
                 '[' => continue :state .bracket,
                 ' ' => continue :state .path_end,
-                else => try last_field_str.append(c),
+                else => {
+                    try last_field_str.append(c);
+                    continue :state .name;
+                },
             }
         },
         .bracketed_name => {
@@ -88,7 +91,10 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                         else => unreachable,
                     }
                 },
-                else => try last_field_str.append(c_1),
+                else => {
+                    try last_field_str.append(c_1);
+                    continue :state .bracketed_name;
+                },
             }
         },
         .array_idx => {
@@ -98,7 +104,11 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                 '.' => continue :state .dot,
                 '[' => continue :state .bracket,
                 ' ' => continue :state .path_end,
-                else => {},
+                else => {
+                    // does not currently read the actual array idx,
+                    // just continues until it hits next path segment.
+                    continue :state .array_idx;
+                },
             }
         },
         .path_end => {
@@ -205,6 +215,7 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                     // in the switch expr.
                     try stdout.writeByte('\\');
                     try stdout.writeByte(try input.readByte());
+                    continue :state .value_string;
                 },
                 '"' => {
                     try stdout.writeByte('"');
@@ -212,7 +223,10 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                     assert(c_2 == ';');
                     continue :state .endline;
                 },
-                else => try stdout.writeByte(c),
+                else => {
+                    try stdout.writeByte(c);
+                    continue :state .value_string;
+                },
             }
         },
         .value_non_string => {
@@ -222,7 +236,10 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                 ';' => {
                     continue :state .endline;
                 },
-                else => try stdout.writeByte(c),
+                else => {
+                    try stdout.writeByte(c);
+                    continue :state .value_non_string;
+                },
             }
         },
         .endline => {
