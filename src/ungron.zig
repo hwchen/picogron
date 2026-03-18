@@ -84,6 +84,7 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                     // in the switch expr.
                     try last_field_str.append('\\');
                     try last_field_str.append(try input.readByte());
+                    continue :state .bracketed_name;
                 },
                 '"' => {
                     const c_2 = try input.readByte();
