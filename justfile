@@ -88,3 +88,9 @@ perf-gron file *args="":
 # stackcollapse-perf.pl and flamegraph.pl symlinked into path from flamegraph repo
 flamegraph:
     perf script | stackcollapse-perf.pl | flamegraph.pl > perf.svg
+
+ungron-dev:
+    picogron testdata/highly-nested.json | picogron -u
+
+ungron-dev-bench:
+    poop "picogron -u testdata/citylots.gron" "fastgron -u testdata/citylots.gron"
