@@ -29,24 +29,24 @@ bench file *args="":
 # poop doesn't use shell, so can't use pipes etc.
 # Pass -u to test ungron
 bench-cmp file *args="":
-    zig build -Doptimize=ReleaseFast && poop \
+    poop \
     "./zig-out/bin/picogron {{args}} {{file}}" \
     "fastgron {{args}} {{file}}" \
     "gron {{args}} {{file}}"
 
 # hyperfine uses shell, so can redirect with pipes
 bench-cmp-roundtrip file:
-    zig build -Doptimize=ReleaseFast && hyperfine \
+    hyperfine \
     "./zig-out/bin/picogron {{file}} | ./zig-out/bin/picogron -u > /dev/null" \
     "fastgron {{file}} | fastgron -u > /dev/null" \
     "gron {{file}} | gron -u > /dev/null"
 
 hyperfine file *args="":
-    zig build -Doptimize=ReleaseFast && hyperfine \
+    hyperfine \
     "./zig-out/bin/picogron {{args}} {{file}}" \
 
 hyperfine-cmp file *args="":
-    zig build -Doptimize=ReleaseFast && hyperfine \
+    hyperfine \
     "./zig-out/bin/picogron {{args}} {{file}}" \
     "fastgron {{args}} {{file}}" \
     "gron {{args}} {{file}}"
@@ -56,7 +56,7 @@ turnt *args="":
 
 # gron appears to sort differently than `sort`, double check this?
 diff-gron file *args="":
-    zig build && diff <(./zig-out/bin/picogron {{file}} {{args}} | sort) <(gron {{file}} {{args}} | sort)
+    diff <(./zig-out/bin/picogron {{file}} {{args}} | sort) <(gron {{file}} {{args}} | sort)
 
 # arrays are formatted differently, so need to do compact for both
 diff-roundtrip file:
@@ -83,7 +83,7 @@ perf bin file *args="":
     perf record --call-graph dwarf {{bin}} {{file}} {{args}} > /dev/null
 
 perf-gron file *args="":
-    zig build -Doptimize=ReleaseFast && just perf ./zig-out/bin/picogron {{args}} {{file}}
+    just perf ./zig-out/bin/picogron {{args}} {{file}}
 
 # stackcollapse-perf.pl and flamegraph.pl symlinked into path from flamegraph repo
 flamegraph:
