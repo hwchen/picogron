@@ -1,0 +1,1 @@
+command = "../../zig-out/bin/picogron -u {filename}"

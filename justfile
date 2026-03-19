@@ -51,6 +51,9 @@ hyperfine-cmp file *args="":
     "fastgron {{args}} {{file}}" \
     "gron {{args}} {{file}}"
 
+turnt *args="":
+    turnt --diff {{args}} test/**/*.t
+
 # gron appears to sort differently than `sort`, double check this?
 diff-gron file *args="":
     zig build && diff <(./zig-out/bin/picogron {{file}} {{args}} | sort) <(gron {{file}} {{args}} | sort)
