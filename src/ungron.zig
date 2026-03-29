@@ -329,7 +329,6 @@ fn comparePathName(
         return;
     }
 
-    // TODO for null, fill null instead of pop item
     const eq_path_at_depth = switch (path_stack.slice()[depth]) {
         .root => false,
         .name => |*n_opt| if (n_opt.*) |n| mem.eql(u8, name, n) else {
@@ -387,10 +386,13 @@ fn comparePathIdx(
         return;
     }
 
-    // TODO for null, fill null instead of pop item
     const eq_path_at_depth = switch (path_stack.slice()[depth]) {
         .root => false,
-        .array_idx => |i_opt| if (i_opt) |i| idx == i else false,
+        .array_idx => |*i_opt| if (i_opt.*) |i| idx == i else {
+            // Hack; early return when filling null
+            i_opt.* = idx;
+            return;
+        },
         .name => unreachable("this fn only compares array idx"),
     };
     if (!eq_path_at_depth) {
