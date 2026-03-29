@@ -92,5 +92,7 @@ flamegraph:
 ungron-dev:
     picogron testdata/highly-nested.json | picogron -u
 
+# Looks like picogron is v. fast at small files, but slower at large files?
 ungron-dev-bench:
     poop "picogron -u testdata/citylots.gron" "fastgron -u testdata/citylots.gron"
+    poop "picogron -u testdata/highly-nested.gron" "fastgron -u testdata/highly-nested.gron"

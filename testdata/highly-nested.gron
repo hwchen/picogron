@@ -1,0 +1,4 @@
+json = {};
+json.a = {};
+json.a.b = [];
+json.c = "";

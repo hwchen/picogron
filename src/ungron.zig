@@ -323,6 +323,10 @@ fn comparePathName(
         // TODO is this true for arrays?
         _ = path_stack.pop().?;
 
+        // Since we're replacing at the same level, there should
+        // be a comma between children
+        _ = try stdout.writeByte(',');
+
         _ = try stdout.writeByte('"');
         _ = try stdout.write(name);
         _ = try stdout.write("\":");
@@ -364,6 +368,10 @@ fn comparePathIdx(
         // Last pop should not write a close bracket
         // TODO is this true for arrays?
         _ = path_stack.pop().?;
+
+        // Since we're replacing at the same level, there should
+        // be a comma between children
+        _ = try stdout.writeByte(',');
 
         try path_stack.append(.{ .array_idx = idx });
     }
