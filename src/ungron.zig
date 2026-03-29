@@ -356,7 +356,11 @@ fn comparePathName(
         }
         // Last pop should not write a close bracket
         // TODO is this true for arrays?
-        _ = path_stack.pop().?;
+        switch (path_stack.pop().?) {
+            .root => unreachable("logic bug"),
+            .name => |n_opt| if (n_opt) |n| path_names_alloc.free(n),
+            .array_idx => {},
+        }
 
         // Since we're replacing at the same level, there should
         // be a comma between children
@@ -403,7 +407,11 @@ fn comparePathIdx(
         }
         // Last pop should not write a close bracket
         // TODO is this true for arrays?
-        _ = path_stack.pop().?;
+        switch (path_stack.pop().?) {
+            .root => unreachable("logic bug"),
+            .name => |n_opt| if (n_opt) |n| path_names_alloc.free(n),
+            .array_idx => {},
+        }
 
         // Since we're replacing at the same level, there should
         // be a comma between children
