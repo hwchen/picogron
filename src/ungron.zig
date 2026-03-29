@@ -18,10 +18,33 @@ const PathStack = std.BoundedArray(PathItem, 1024);
 //
 // We need to keep name segments in a stack to do the diffing.
 //
+// # Handling obj/arr which do not appear in path, are only declared as value.
+//
+// ```
+// json = {};
+// json.a = {};
+// json.a.b = [];
+// json.c = "";
+// ```
+// Notice that the array is never used in the path, and it's empty.
+//
+// Because of this, just writing the segments that appear in the path
+// is insufficient.
+//
+// The solution is to have `name` and `array_idx` be able to carry null values.
+//
+// When we see an obj/arr declared on the rhs, we'll
+// - set a null stack item, ready to be filled if there's a path segment
+//     on the next line.
+// - write an "open" bracket.
+//
+// On parsing the next line, if there's a path segment at the right depth
+// it will "fill" the null stack item.
+//
+// When popping, close will happen correctly whether the stack item is null
+// or not, as close does not depend on the value of the stack item.
+//
 // TODO:
-// - fix bracket closing
-// - fix commas
-// - fix missing object/array when it's empty and not in path
 // - fix nulls in array skips
 // - fix perf
 
@@ -179,13 +202,17 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
 
             switch (c) {
                 '{' => {
-                    // Write obj open when comparing path stack
+                    // Write name placeholder to stack
+                    try path_stack.append(.{ .name = null });
+                    try stdout.writeByte('{');
                     const cs_2 = try input.readBytesNoEof(2);
                     assert(mem.eql(u8, &cs_2, "};"));
                     continue :state .endline;
                 },
                 '[' => {
-                    // Write arr open when comparing path stack
+                    // Write arr idx placeholder to stack
+                    try path_stack.append(.{ .array_idx = null });
+                    try stdout.writeByte('[');
                     const cs_2 = try input.readBytesNoEof(2);
                     assert(mem.eql(u8, &cs_2, "];"));
                     continue :state .endline;
@@ -267,8 +294,8 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
 
 const PathItem = union(enum) {
     root,
-    name: []const u8,
-    array_idx: u64,
+    name: ?[]const u8,
+    array_idx: ?u64,
 };
 
 const ParseState = enum {
@@ -302,9 +329,10 @@ fn comparePathName(
         return;
     }
 
+    // TODO for null, fill null instead of pop item
     const eq_path_at_depth = switch (path_stack.slice()[depth]) {
         .root => false,
-        .name => |n| mem.eql(u8, name, n),
+        .name => |n_opt| if (n_opt) |n| mem.eql(u8, name, n) else false,
         .array_idx => unreachable("this fn only compares path"),
     };
     if (!eq_path_at_depth) {
@@ -312,8 +340,8 @@ fn comparePathName(
         while (path_stack.len - 1 > depth) {
             switch (path_stack.pop().?) {
                 .root => unreachable("logic bug"),
-                .name => |n| {
-                    path_names_alloc.free(n);
+                .name => |n_opt| {
+                    if (n_opt) |n| path_names_alloc.free(n);
                     try stdout.writeByte('}');
                 },
                 .array_idx => try stdout.writeByte(']'),
@@ -348,9 +376,10 @@ fn comparePathIdx(
         return;
     }
 
+    // TODO for null, fill null instead of pop item
     const eq_path_at_depth = switch (path_stack.slice()[depth]) {
         .root => false,
-        .array_idx => |i| idx == i,
+        .array_idx => |i_opt| if (i_opt) |i| idx == i else false,
         .name => unreachable("this fn only compares array idx"),
     };
     if (!eq_path_at_depth) {
@@ -358,8 +387,8 @@ fn comparePathIdx(
         while (path_stack.len - 1 > depth) {
             switch (path_stack.pop().?) {
                 .root => unreachable("logic bug"),
-                .name => |n| {
-                    path_names_alloc.free(n);
+                .name => |n_opt| {
+                    if (n_opt) |n| path_names_alloc.free(n);
                     try stdout.writeByte('}');
                 },
                 .array_idx => try stdout.writeByte(']'),
