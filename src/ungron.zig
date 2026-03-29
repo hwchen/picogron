@@ -332,7 +332,14 @@ fn comparePathName(
     // TODO for null, fill null instead of pop item
     const eq_path_at_depth = switch (path_stack.slice()[depth]) {
         .root => false,
-        .name => |n_opt| if (n_opt) |n| mem.eql(u8, name, n) else false,
+        .name => |*n_opt| if (n_opt.*) |n| mem.eql(u8, name, n) else {
+            // Hack; fill null and early return
+            n_opt.* = try path_names_alloc.dupe(u8, name);
+            _ = try stdout.writeByte('"');
+            _ = try stdout.write(name);
+            _ = try stdout.write("\":");
+            return;
+        },
         .array_idx => unreachable("this fn only compares path"),
     };
     if (!eq_path_at_depth) {
