@@ -309,7 +309,7 @@ fn comparePathName(
     };
     if (!eq_path_at_depth) {
         // pop and write close object/array
-        while (path_stack.len > depth) {
+        while (path_stack.len - 1 > depth) {
             switch (path_stack.pop().?) {
                 .root => unreachable("logic bug"),
                 .name => |n| {
@@ -319,6 +319,10 @@ fn comparePathName(
                 .array_idx => try stdout.writeByte(']'),
             }
         }
+        // Last pop should not write a close bracket
+        // TODO is this true for arrays?
+        _ = path_stack.pop().?;
+
         _ = try stdout.writeByte('"');
         _ = try stdout.write(name);
         _ = try stdout.write("\":");
@@ -347,7 +351,7 @@ fn comparePathIdx(
     };
     if (!eq_path_at_depth) {
         // pop and write close object/array
-        while (path_stack.len > depth) {
+        while (path_stack.len - 1 > depth) {
             switch (path_stack.pop().?) {
                 .root => unreachable("logic bug"),
                 .name => |n| {
@@ -357,6 +361,10 @@ fn comparePathIdx(
                 .array_idx => try stdout.writeByte(']'),
             }
         }
+        // Last pop should not write a close bracket
+        // TODO is this true for arrays?
+        _ = path_stack.pop().?;
+
         try path_stack.append(.{ .array_idx = idx });
     }
 }
