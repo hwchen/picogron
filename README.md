@@ -41,6 +41,39 @@ options:
 
 Note: semicolons are always output, and ungron expects semicolons in the input. TODO better error messages for this.
 
+### Ungron note
+
+When GRON input skips around hierarchy, `picogron -u` does not coalesce objects or arrays.
+
+For example,
+```
+json.a.b = "one";
+json.c = "two";
+json.a.d = "three";
+```
+
+With gron, becomes
+```
+{
+  "a": {
+    "b": "one",
+    "d": "three"
+  },
+  "c": "two"
+}
+```
+
+while picogron becomes
+```
+{"a":{"b":"one"},"c":"two","a":{"d":"three"}}
+```
+
+Picogron's streaming-in-order model does not allow skipping around.
+
+And, I imagine that basic cases of `picogron | grep | picogron -u` should always contain hierarchies in the right order.
+
+(Perhaps a use case would be appending a second input? If this is more common than I think, let me know (and also perhaps why gron-style is preferred over jq-style))
+
 ## Development
 
 You'll need zig 0.14 to compile picogron. You can [download](https://ziglang.org/download/).
