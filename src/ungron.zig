@@ -43,9 +43,6 @@ const PathStack = std.BoundedArray(PathItem, 1024);
 //
 // When popping, close will happen correctly whether the stack item is null
 // or not, as close does not depend on the value of the stack item.
-//
-// TODO:
-// - fix perf
 
 pub fn ungron(rdr: anytype, wtr: anytype) !void {
     var br = std.io.bufferedReaderSize(4096 * 8, rdr);
@@ -341,9 +338,10 @@ fn comparePathName(
         .array_idx => unreachable("this fn only compares path"),
     };
     if (!eq_path_at_depth) {
-        // pop and write close object/array
-        while (path_stack.len - 1 > depth) {
-            switch (path_stack.pop().?) {
+        // pop and write close object/array for tail
+        var stack_idx = path_stack.len - 1;
+        while (stack_idx > depth) {
+            switch (path_stack.slice()[stack_idx]) {
                 .root => unreachable("logic bug"),
                 .name => |n_opt| {
                     if (n_opt) |n| path_names_alloc.free(n);
@@ -351,7 +349,10 @@ fn comparePathName(
                 },
                 .array_idx => try stdout.writeByte(']'),
             }
+            stack_idx -= 1;
         }
+        try path_stack.resize(depth + 1);
+
         // Replace curr segment
         switch (path_stack.slice()[depth]) {
             .root, .array_idx => unreachable("logic bug"),
@@ -408,9 +409,10 @@ fn comparePathIdx(
         .name => unreachable("this fn only compares array idx"),
     };
     if (!eq_idx_at_depth) {
-        // pop and write close object/array
-        while (path_stack.len - 1 > depth) {
-            switch (path_stack.pop().?) {
+        // pop and write close object/array tail
+        var stack_idx = path_stack.len - 1;
+        while (stack_idx > depth) {
+            switch (path_stack.slice()[stack_idx]) {
                 .root => unreachable("logic bug"),
                 .name => |n_opt| {
                     if (n_opt) |n| path_names_alloc.free(n);
@@ -418,7 +420,10 @@ fn comparePathIdx(
                 },
                 .array_idx => try stdout.writeByte(']'),
             }
+            stack_idx -= 1;
         }
+        try path_stack.resize(depth + 1);
+
         // Replace curr segment
         switch (path_stack.slice()[depth]) {
             .root, .name => unreachable("logic bug"),
