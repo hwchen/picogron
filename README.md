@@ -1,10 +1,10 @@
 ## Picogron
 
-small code, small memory footprint, small runtime.
-
-Port of [gron](https://github.com/tomnomnom/gron)
+Reimplementation of [gron](https://github.com/tomnomnom/gron), focusing on small code, small memory footprint, small runtime.
 
 The main reason for picogron's existence is to have preserved order for json keys, where gron's keys are either sorted or random.
+
+The focus on small memory footprint means simd-json approaches will win at turning larger json files into gron (like [fastgron](https://github.com/adamritter/fastgron)). On the other hand, picogron performs extremely well on smaller json inputs, as well as ungron for small and large files.
 
 `testdata` is copied from gron at `13561bd`
 
@@ -44,3 +44,5 @@ Note: semicolons are always output, and ungron expects semicolons in the input. 
 ## Development
 
 You'll need zig 0.14 to compile picogron. You can [download](https://ziglang.org/download/).
+
+For some tests, you may need to install the [turnt](https://github.com/cucapra/turnt) test framework.
