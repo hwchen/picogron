@@ -46,7 +46,6 @@ const PathStack = std.BoundedArray(PathItem, 1024);
 //
 // TODO:
 // - fix perf
-// - compare path name: don't pop last item (curr seg), just replace name
 
 pub fn ungron(rdr: anytype, wtr: anytype) !void {
     var br = std.io.bufferedReaderSize(4096 * 8, rdr);
@@ -353,12 +352,13 @@ fn comparePathName(
                 .array_idx => try stdout.writeByte(']'),
             }
         }
-        // Last pop should not write a close bracket
-        // TODO is this true for arrays?
-        switch (path_stack.pop().?) {
-            .root => unreachable("logic bug"),
-            .name => |n_opt| if (n_opt) |n| path_names_alloc.free(n),
-            .array_idx => {},
+        // Replace curr segment
+        switch (path_stack.slice()[depth]) {
+            .root, .array_idx => unreachable("logic bug"),
+            .name => |*n_opt| if (n_opt.*) |n| {
+                path_names_alloc.free(n);
+                n_opt.* = try path_names_alloc.dupe(u8, name);
+            },
         }
 
         // Since we're replacing at the same level, there should
@@ -368,7 +368,6 @@ fn comparePathName(
         _ = try stdout.writeByte('"');
         _ = try stdout.write(name);
         _ = try stdout.write("\":");
-        try path_stack.append(.{ .name = try path_names_alloc.dupe(u8, name) });
     }
 }
 
@@ -420,7 +419,7 @@ fn comparePathIdx(
                 .array_idx => try stdout.writeByte(']'),
             }
         }
-        // Instead of popping curr item, just replace array_idx
+        // Replace curr segment
         switch (path_stack.slice()[depth]) {
             .root, .name => unreachable("logic bug"),
             .array_idx => |*n_opt| {
