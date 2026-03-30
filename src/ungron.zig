@@ -392,8 +392,10 @@ fn comparePathIdx(
     const eq_idx_at_depth = blk: switch (path_stack.slice()[depth]) {
         .root => false,
         .array_idx => |*i_opt| if (i_opt.*) |i| {
-            for (i..idx - 1) |_| {
-                _ = try stdout.write(",null");
+            if (idx != i) {
+                for (i..idx - 1) |_| {
+                    _ = try stdout.write(",null");
+                }
             }
             break :blk idx == i;
         } else {
