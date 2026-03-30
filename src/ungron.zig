@@ -45,8 +45,8 @@ const PathStack = std.BoundedArray(PathItem, 1024);
 // or not, as close does not depend on the value of the stack item.
 //
 // TODO:
-// - fix nulls in array skips
 // - fix perf
+// - compare path name: don't pop last item (curr seg), just replace name
 
 pub fn ungron(rdr: anytype, wtr: anytype) !void {
     var br = std.io.bufferedReaderSize(4096 * 8, rdr);
@@ -382,20 +382,31 @@ fn comparePathIdx(
     std.log.debug("comparePathIdx: {d} {any}", .{ depth, path_stack.slice() });
     if (depth >= path_stack.len) {
         _ = try stdout.writeByte('[');
+        for (0..idx) |_| {
+            _ = try stdout.write("null,");
+        }
         try path_stack.append(.{ .array_idx = idx });
         return;
     }
 
-    const eq_path_at_depth = switch (path_stack.slice()[depth]) {
+    const eq_idx_at_depth = blk: switch (path_stack.slice()[depth]) {
         .root => false,
-        .array_idx => |*i_opt| if (i_opt.*) |i| idx == i else {
+        .array_idx => |*i_opt| if (i_opt.*) |i| {
+            for (i..idx - 1) |_| {
+                _ = try stdout.write(",null");
+            }
+            break :blk idx == i;
+        } else {
             // Hack; early return when filling null
             i_opt.* = idx;
+            for (0..idx) |_| {
+                _ = try stdout.write("null,");
+            }
             return;
         },
         .name => unreachable("this fn only compares array idx"),
     };
-    if (!eq_path_at_depth) {
+    if (!eq_idx_at_depth) {
         // pop and write close object/array
         while (path_stack.len - 1 > depth) {
             switch (path_stack.pop().?) {
@@ -407,18 +418,16 @@ fn comparePathIdx(
                 .array_idx => try stdout.writeByte(']'),
             }
         }
-        // Last pop should not write a close bracket
-        // TODO is this true for arrays?
-        switch (path_stack.pop().?) {
-            .root => unreachable("logic bug"),
-            .name => |n_opt| if (n_opt) |n| path_names_alloc.free(n),
-            .array_idx => {},
+        // Instead of popping curr item, just replace array_idx
+        switch (path_stack.slice()[depth]) {
+            .root, .name => unreachable("logic bug"),
+            .array_idx => |*n_opt| {
+                n_opt.* = idx;
+            },
         }
 
         // Since we're replacing at the same level, there should
         // be a comma between children
         _ = try stdout.writeByte(',');
-
-        try path_stack.append(.{ .array_idx = idx });
     }
 }
