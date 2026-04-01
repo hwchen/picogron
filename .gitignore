@@ -10,3 +10,4 @@ perf.*
 *.svg
 result/
 result
+target/
