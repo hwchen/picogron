@@ -5,6 +5,7 @@ const io = std.io;
 const gron = @import("gron.zig");
 const gron_stream = @import("gron_stream.zig");
 const ungron = @import("ungron.zig");
+const GenCatData = @import("GenCatData");
 
 pub fn main() !void {
     var arg_buf: [512]u8 = undefined;
@@ -49,12 +50,19 @@ pub fn main() !void {
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
 
+    // Used to hold data for unicode processing (checking if string is
+    // javascript ident).
+    var gcd_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    const gcd_alloc = gcd_arena.allocator();
+    var gcd = try GenCatData.init(gcd_alloc);
+    defer gcd_arena.deinit();
+
     if (opts.ungron) {
         try ungron.ungron(input, stdout);
     } else if (opts.stream) {
-        try gron_stream.gronStream(input, stdout);
+        try gron_stream.gronStream(input, stdout, &gcd);
     } else {
-        try gron.gron(input, stdout, .{});
+        try gron.gron(input, stdout, .{}, &gcd);
     }
     try bw.flush();
 }

@@ -1,8 +1,9 @@
 const std = @import("std");
 const math = std.math;
 const gron = @import("gron.zig");
+const GenCatData = @import("GenCatData");
 
-pub fn gronStream(rdr: anytype, wtr: anytype) !void {
+pub fn gronStream(rdr: anytype, wtr: anytype, gcd: *GenCatData) !void {
     var br = std.io.bufferedReader(rdr);
     const input = br.reader();
     var line_buf: [4096 * 8]u8 = undefined;
@@ -12,7 +13,12 @@ pub fn gronStream(rdr: anytype, wtr: anytype) !void {
     var line_idx: usize = 0;
     while (try input.readUntilDelimiterOrEof(&line_buf, '\n')) |line| {
         var line_stream = std.io.fixedBufferStream(line);
-        try gron.gron(line_stream.reader(), wtr, .{ .line_idx = line_idx });
+        try gron.gron(
+            line_stream.reader(),
+            wtr,
+            .{ .line_idx = line_idx },
+            gcd
+        );
         line_idx += 1;
     }
 }

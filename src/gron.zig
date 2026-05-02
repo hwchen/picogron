@@ -6,14 +6,12 @@ const fmt = std.fmt;
 const GenCatData = @import("GenCatData");
 const json_ident = @import("json_ident.zig");
 
-pub fn gron(rdr: anytype, stdout: anytype, stream_info: StreamInfo) !void {
-    // Used to hold data for unicode processing (checking if string is
-    // javascript ident).
-    var gcd_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    const gcd_alloc = gcd_arena.allocator();
-    var gcd = try GenCatData.init(gcd_alloc);
-    defer gcd_arena.deinit();
-
+pub fn gron(
+    rdr: anytype,
+    stdout: anytype,
+    stream_info: StreamInfo,
+    gcd: *GenCatData,
+) !void {
     // Used to track nesting levels for json parser
     var j_buf: [512]u8 = undefined;
     var j_fba = std.heap.FixedBufferAllocator.init(&j_buf);
@@ -80,7 +78,7 @@ pub fn gron(rdr: anytype, stdout: anytype, stream_info: StreamInfo) !void {
 
                         // We can assume that since we received an .object_begin,
                         // we must write the key, otherwise the json is malformed.
-                        if (shouldBracketField(key, &gcd)) {
+                        if (shouldBracketField(key, gcd)) {
                             // may contain escaped characters
                             _ = try stdout.write("[");
                             try json.encodeJsonString(key, .{}, &stdout);
@@ -107,12 +105,12 @@ pub fn gron(rdr: anytype, stdout: anytype, stream_info: StreamInfo) !void {
                             .object_begin => {
                                 try stdout.print(" = {{}};\n", .{});
                                 const name = try stack_names_alloc.dupe(u8, key);
-                                try stack.append(.{ .object_begin = .{ .name = name, .bracket = shouldBracketField(key, &gcd) } });
+                                try stack.append(.{ .object_begin = .{ .name = name, .bracket = shouldBracketField(key, gcd) } });
                             },
                             .array_begin => {
                                 try stdout.print(" = [];\n", .{});
                                 const name = try stack_names_alloc.dupe(u8, key);
-                                try stack.append(.{ .array_begin = .{ .name = name, .bracket = shouldBracketField(key, &gcd) } });
+                                try stack.append(.{ .array_begin = .{ .name = name, .bracket = shouldBracketField(key, gcd) } });
                             },
                             .object_end, .array_end => {
                                 return error.malformedJson;
