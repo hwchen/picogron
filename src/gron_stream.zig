@@ -12,6 +12,7 @@ pub fn gronStream(rdr: anytype, wtr: anytype) !void {
 
     var line_idx: usize = 0;
     while (try input.readUntilDelimiterOrEofAlloc(line_alloc, '\n', math.maxInt(u32))) |line| {
+        defer _ = line_arena.reset(.retain_capacity);
         var line_stream = std.io.fixedBufferStream(line);
         try gron.gron(line_stream.reader(), wtr, .{ .line_idx = line_idx });
         line_idx += 1;

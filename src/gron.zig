@@ -12,6 +12,7 @@ pub fn gron(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
     var gcd_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     const gcd_alloc = gcd_arena.allocator();
     var gcd = try GenCatData.init(gcd_alloc);
+    defer gcd_arena.deinit();
 
     // Used to track nesting levels for json parser
     var j_buf: [512]u8 = undefined;
@@ -22,6 +23,7 @@ pub fn gron(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
     // Reset on each iteration of loop, as we don't need past parse values.
     var val_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     const val_alloc = val_arena.allocator();
+    defer val_arena.deinit();
 
     // tracks statement stack (but not the associate names, to ensure that the
     // fba frees the names properly). Deinit not required.
@@ -77,6 +79,7 @@ pub fn gron(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
                         // for certain lines, if the key = {} or [], we'll need to save the key
                         // to the stack. But we won't know until nextAlloc is called.
                         const key = try val_alloc.dupe(u8, s);
+
 
                         // We can assume that since we received an .object_begin,
                         // we must write the key, otherwise the json is malformed.
