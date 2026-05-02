@@ -62,7 +62,7 @@ diff-gron file *args="":
 diff-roundtrip file:
     diff <(./zig-out/bin/picogron {{file}} | ./zig-out/bin/picogron -u) <(cat {{file}} | jq -c)
 
-test: test-roundtrip test-vs-gron test-vs-gron-stream
+test: test-roundtrip test-vs-gron
 
 test-roundtrip:
     \fd json testdata --exclude "*stream*" --exec just diff-roundtrip

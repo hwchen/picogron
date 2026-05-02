@@ -46,13 +46,17 @@ pub fn main() !void {
     } else io.getStdIn().reader();
 
     const stdout_file = std.io.getStdOut().writer();
+    var bw = std.io.bufferedWriter(stdout_file);
+    const stdout = bw.writer();
+
     if (opts.ungron) {
-        try ungron.ungron(input, stdout_file);
+        try ungron.ungron(input, stdout);
     } else if (opts.stream) {
-        try gron_stream.gronStream(input, stdout_file);
+        try gron_stream.gronStream(input, stdout);
     } else {
-        try gron.gron(input, stdout_file, .{});
+        try gron.gron(input, stdout, .{});
     }
+    try bw.flush();
 }
 
 const Opts = struct {

@@ -6,7 +6,7 @@ const fmt = std.fmt;
 const GenCatData = @import("GenCatData");
 const json_ident = @import("json_ident.zig");
 
-pub fn gron(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
+pub fn gron(rdr: anytype, stdout: anytype, stream_info: StreamInfo) !void {
     // Used to hold data for unicode processing (checking if string is
     // javascript ident).
     var gcd_arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -47,9 +47,6 @@ pub fn gron(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
     var stack_names_fba = std.heap.FixedBufferAllocator.init(&stack_names_buf);
     const stack_names_alloc = stack_names_fba.allocator();
 
-    var bw = std.io.bufferedWriter(wtr);
-    const stdout = bw.writer();
-
     var jr = std.json.reader(j_alloc, rdr);
 
     while (true) {
@@ -57,7 +54,7 @@ pub fn gron(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
 
         // write stack
         if (shouldWriteLine(token)) {
-            try writeStack(stack.items, &stdout);
+            try writeStack(stack.items, stdout);
         }
 
         // write value
@@ -180,7 +177,7 @@ pub fn gron(rdr: anytype, wtr: anytype, stream_info: StreamInfo) !void {
             else => {},
         }
     }
-    try bw.flush();
+    // final flush occurs outside of this fn.
 }
 
 fn writeStack(stack: []StackItem, wtr: anytype) !void {

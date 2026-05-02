@@ -44,11 +44,9 @@ const PathStack = std.BoundedArray(PathItem, 1024);
 // When popping, close will happen correctly whether the stack item is null
 // or not, as close does not depend on the value of the stack item.
 
-pub fn ungron(rdr: anytype, wtr: anytype) !void {
+pub fn ungron(rdr: anytype, stdout: anytype) !void {
     var br = std.io.bufferedReaderSize(4096 * 8, rdr);
     const input = br.reader();
-    var bw = std.io.bufferedWriter(wtr);
-    const stdout = bw.writer();
 
     // tracks nesting levels of array and object
     // Currently uses difference in nesting level between two paths to know
@@ -265,10 +263,6 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
             std.log.debug(".endline stack {any}\n", .{path_stack.slice()});
 
             assert(c == '\n');
-            // flushing more often helps with debugging
-            if (builtin.mode == .Debug) {
-                try bw.flush();
-            }
             continue :state .startline;
         },
         .end => {
@@ -281,8 +275,8 @@ pub fn ungron(rdr: anytype, wtr: anytype) !void {
                     .root => {},
                 }
             }
-            _ = try bw.write("\n");
-            try bw.flush();
+            _ = try stdout.write("\n");
+            // final flush outside of this fn.
             return;
         },
     }
